@@ -3,7 +3,7 @@
 import os
 import sys
 
-
+# TODO: Add a command to create a new database
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dungeonmaster.settings')
