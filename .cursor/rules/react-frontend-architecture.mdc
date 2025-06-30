@@ -1,0 +1,137 @@
+---
+description: frontend architecture. explaines fdd for frontend features.
+globs: 
+alwaysApply: false
+---
+# Arcanovi Frontend – Architekturleitfaden
+
+## Einführung
+
+Dieses Dokument beschreibt die verbindlichen Architektur- und Organisationsrichtlinien für das React-Frontend von **Arcanovi**.
+
+Ziel ist eine **Feature Driven Design**-Struktur (FDD), die fachliche Kapselung sowie eine eindeutige Zuordnung jeder Zeile Code zu genau **einem** Produkt-Feature sicherstellt. In Kombination mit **Atomic Design** für UI-Komponenten entsteht eine Codebasis, die skalierbar, testbar und leicht verständlich ist.
+
+---
+
+## Zielsetzung
+
+* **Wartbarkeit & Erweiterbarkeit** – einfacher Austausch oder Hinzufügen von Features ohne Seiteneffekte
+* **Klare Trennung von Verantwortlichkeiten** – UI, State, API-Calls und Routing pro Feature kapseln
+* **Konsistente Projektstruktur** – alle Features sehen identisch aus; Onboarding neuer Devs < 30 min
+* **Geringe Kopplung, hohe Kohäsion** – `shared/` nur wo **wirklich** generisch
+* **Developer Experience first** – Vite + HMR, ESLint, Prettier, Husky & lint-staged, Storybook optional
+* **Barrierefreiheit & Internationalisierung** – a11y-konforme Komponenten und i18n-Dateien pro Feature
+
+---
+
+## Projektstruktur (Top Level)
+
+```text
+frontend/src/
+├─ app/                  # App-Shell & Provider (App.tsx)
+├─ config/               # Build- & Laufzeit-Konfiguration
+├─ core/                 # Framework-Querschnitt (z. B. Router, Auth)
+├─ devtools/             # Entwicklerwerkzeuge
+│  ├─ ToolA/             # Tool-spezifische Komponenten und Funktionen
+├─ shared/               # 100 % generische UI/Utils (ohne Business-Kontext)
+│  ├─ ui/
+│  ├─ lib/
+│  ├─ api/               # Zentrale API-Instanz & utils
+│  └─ types/
+├─ features/             # 💡 Alle Business-Features (FDD)
+│  ├─ FeatureA/
+│  │  ├─ api/            # API-Mapping für das Feature
+│  │  ├─ components/     # Feature-spezifische UI-Komponenten
+│  │  │  ├─ atoms/
+│  │  │  ├─ molecules/
+│  │  │  └─ organisms/
+│  │  ├─ pages/          # Route-Komponenten
+│  │  ├─ hooks/          # Custom Hooks des Features
+│  │  ├─ state/          # Zustandsspeicher (Redux Slice oder Zustand Store)
+│  │  ├─ types/          # Feature-spezifische TS-Interfaces
+│  │  ├─ tests/          # Lokale Tests
+│  │  ├─ locales/        # i18n-Dateien (z. B. de.json, en.json)
+│  │  ├─ routes/         # route.config.ts, paths.ts, index.ts
+│  │  └─ index.ts        # Barrel Export
+├─ main.tsx              # Vite Entry
+└─ index.html            # HTML Template für React
+```
+
+---
+
+## Kernprinzipien
+
+### 1. Feature Driven Design (FDD)
+
+* Jedes Feature ist ein gekapselter Slice mit eigener Verantwortung
+* Keine Cross-Feature Imports – Kommunikation nur über `shared/` oder explizite Schnittstellen
+* Jede Feature-Struktur folgt der definierten Kapsel (siehe oben)
+
+### 2. Atomic Design innerhalb der Features
+
+* `atoms/` → Grundelemente (Button, Input)
+* `molecules/` → Kombination einfacher Komponenten
+* `organisms/` → Sektionen mit komplexer Logik & Darstellung
+
+### 3. Zentrale API-Services pro Feature
+
+* Jedes Feature nutzt **ts-Services** unter `api/`, die mit zentraler Axios-Instanz arbeiten
+* Keine API-Calls in Komponenten oder Hooks – nur Services
+
+### 4. Internationale Texte & Barrierefreiheit
+
+* Kein Text direkt im JSX – alles via i18n
+* Jede Feature-Komponente nutzt i18n-Namespaces (Feature-spezifisch)
+* Alle interaktiven Elemente sind keyboard- und screenreader-freundlich (WCAG-konform)
+
+---
+
+## Routing-Strategie
+
+* `core/routing/` enthält zentrale Konfiguration (Route Registry)
+* Jedes Feature liefert `RouteDefinition[]` und optionale `PATHS`-Konstanten
+* Lazy Imports der Seiten via React.lazy
+* Zugriff auf Routen nur über zentral definierte Routen-Objekte (keine String-Paths direkt)
+
+---
+
+## Code- & Namenskonventionen
+
+| Bereich   | Regel                                                              |
+| --------- | ------------------------------------------------------------------ |
+| Dateien   | `PascalCase.tsx` für Components, `camelCase.ts` für Funktionen     |
+| Hooks     | `useVerbNoun` (z. B. `useFetchItems`)                              |
+| State     | `<feature>Slice.ts` oder `use<Feature>Store.ts`                    |
+| Tests     | `*.test.ts(x)` direkt neben zu testender Datei oder unter `tests/` |
+| i18n Keys | `feature.keyName` (z. B. `team.title`)                             |
+| Styles    | Nur TailwindCSS; bei Bedarf `@apply` in lokaler CSS                |
+
+---
+
+## Build & Deploy
+
+* **Vite**: `npm run build` erzeugt `dist/`
+* **Docker**: Multi-Stage mit statischem Nginx
+* **Nginx**: `/api/` wird zum Backend weitergeleitet, Rest aus `index.html`
+* **CI/CD**: GitHub Actions (Build, Test, Deploy Staging/Prod)
+
+---
+
+## Testing
+
+| Ebene | Tooling                     |
+| ----- | --------------------------- |
+| Unit  | Vitest + jsdom              |
+| UI    | React Testing Library       |
+| E2E   | Playwright (Headless in CI) |
+
+* Tests direkt im Feature (in `tests/` oder als `.test.tsx` daneben)
+* Coverage-Gate: ≥80 % bei neuem Code
+
+---
+
+## Schlussfolgerung
+
+Diese Architektur sichert maximale Klarheit, Wiederverwendbarkeit und Testbarkeit. Jedes Feature ist isoliert, alle Komponenten folgen einem UI-Schema (Atomic Design), API-Aufrufe sind gebündelt, Texte internationalisiert und Barrierefreiheit wird durchgängig beachtet.
+
+Halte Dich strikt an die Struktur und Konventionen, um ein langlebiges, robustes und skalierbares Frontend zu gewährleisten.

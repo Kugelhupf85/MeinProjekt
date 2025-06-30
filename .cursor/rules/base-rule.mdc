@@ -1,0 +1,215 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# General Architecture Rules - Arcanovi Project
+
+## Core Communication Principles
+
+- Assistant responds in German during conversations
+- **ALL code, variable names, comments, functions, directory names, documentation, and structural elements MUST be written in English**
+- Technical terminology is used precisely regarding Django, React, PostgreSQL, Docker, Nginx, and Feature-Driven Design
+
+## Project Architecture Overview
+
+### Feature-Driven Design (FDD)
+The entire system follows **Feature-Driven Design** principles:
+- **Django Backend**: Features organized as independent Django apps under `backend/api/apps/`
+- **React Frontend**: Features organized in `frontend/src/features/` with Atomic Design patterns
+- Each feature maintains complete independence with clear boundaries
+- Cross-feature communication only through well-defined interfaces
+
+### Technology Stack
+- **Backend**: Django + PostgreSQL + JWT Authentication
+- **Frontend**: React + TypeScript + Vite + Tailwind CSS
+- **Infrastructure**: Docker + Nginx + Docker Compose
+- **Real-time**: Server-Sent Events (SSE) for streaming (optional)
+
+## Django Backend Architecture (backend Service)
+
+### Feature Organization
+- Each feature = one Django app in `backend/api/apps/`
+- Apps follow aspect-based separation (see rules for Django Backend Architecture)
+- API-only backend - no template rendering, no Django Admin
+- JWT authentication as the only authentication model
+
+### Key Specifications
+- PostgreSQL as central database with optimized indexing
+- Database-based session management (no Redis dependency)
+- Gunicorn as WSGI server for container deployment
+- Server-Sent Events (SSE) support for real-time streaming (optional)
+- RESTful API design under `/api/` endpoints
+
+### Dependencies
+- Django & Django REST Framework
+- psycopg2 (PostgreSQL Adapter)
+- gunicorn (WSGI Server)
+- django-environ (environment management)
+- djangorestframework-simplejwt (JWT authentication)
+- Background tasks handled by Django's built-in mechanisms or lightweight alternatives
+
+## React Frontend Architecture (frontend Service)
+
+### Feature Organization
+- Features in `frontend/src/features/<FeatureName>/` with strict directory structure
+- Atomic Design: atoms/, molecules/, organisms/ within each feature
+- TypeScript enforcement for all components and services
+- Mandatory internationalization - no hardcoded strings (see rules for React Feature Development)
+
+### Key Specifications
+- Vite as build tool and development server
+- React Router for client-side routing
+- React Query or SWR for data fetching
+- Tailwind CSS for styling (configured in `tailwind.config.js`)
+- Design System integration with component reuse
+- SSE integration for real-time updates (optional, see rules for React SSE Integration)
+
+### Dependencies
+- React + TypeScript
+- Vite (build tool)
+- React Router (routing)
+- React Query/SWR (data fetching)
+- Tailwind CSS (styling)
+- react-i18next (internationalization)
+- ESLint + Prettier (code quality)
+
+## Services Integration & Communication
+
+### Nginx Reverse Proxy
+- Forwards requests between frontend and backend services
+- Serves static files and media from Docker volumes
+- Optimized SSE configuration for real-time streaming (optional, see rules for Infrastructure & DevOps)
+
+### API Communication
+- RESTful API design with versioning (`/api/v1/`)
+- JWT authentication for all protected endpoints
+- CORS configuration for cross-origin requests
+- Swagger/OpenAPI documentation (drf-spectacular)
+
+### Real-time Features (Optional)
+- Server-Sent Events (SSE) for streaming responses
+- JWT authentication in SSE connections via polyfill
+- Event-driven architecture for feature communication
+
+## Project Structure
+
+```
+arcanovi/
+├── backend/                # Django Backend (Feature-Driven Apps)
+│   ├── api/                # Main Django project
+│   │   ├── apps/           # Feature apps with aspect-based structure
+│   │   ├── arcanovi/       # Django project configuration
+│   │   ├── shared/         # Common utilities & base classes
+│   │   ├── logs/           # Application logging
+│   │   └── manage.py
+│   ├── utils/              # Backend utilities and helpers
+│   └── Dockerfile
+├── frontend/               # React Frontend (Feature-Driven + Atomic Design)
+│   ├── public/
+│   ├── src/
+│   │   ├── features/       # Feature-based organization
+│   │   ├── locales/        # Internationalization files
+│   │   └── shared/         # Design system components
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   └── Dockerfile
+├── nginx/                  # Nginx Configuration
+│   ├── nginx.conf
+│   ├── conf.d/             # Server/location blocks
+│   └── Dockerfile
+├── postgres/               # PostgreSQL initialization
+├── docker-compose.yml      # Service orchestration
+├── .env.example            # Environment template
+└── README.md
+```
+
+## Docker-First Infrastructure
+
+### Container Operations
+**ALL commands MUST be executed within Docker containers:**
+- Django commands: `docker compose exec backend python manage.py [command]`
+- Frontend commands: `docker compose exec frontend npm [command]`
+- Database migrations: `docker compose exec backend python manage.py migrate`
+- Log monitoring: `docker compose logs -f [service_name]`
+- Container rebuilds: `docker compose up -d --build [service_name]`
+
+### Service Health & Monitoring
+- Health checks for all services in docker-compose.yml
+- Centralized logging and error tracking
+- Performance monitoring for both backend and frontend
+- Database backup strategies and restoration procedures
+
+## Development Workflow Standards
+
+### Feature Development Process
+1. **Backend**: Create Django app with aspect-based structure (see rules for Django Backend Architecture)
+2. **Frontend**: Create feature directory with Atomic Design components (see rules for React Feature Development)
+3. **API Integration**: Implement RESTful endpoints with proper authentication
+4. **Internationalization**: Ensure all UI text is localized (see rules for React Feature Language & Accessibility)
+5. **Testing**: Implement comprehensive test suites for both layers
+6. **Documentation**: Update feature documentation and API specs
+
+### Code Quality Enforcement
+- Automatic validation for internationalization compliance (see rules for React Feature Validation)
+- Design system integration validation
+- Feature structure compliance checking
+- TypeScript strict mode enforcement
+- Automated code formatting (ESLint, Prettier, Black)
+
+### Security Implementation
+- No secrets in code - environment variables only
+- HTTPS/TLS mandatory in production
+- JWT token security and rotation
+- CORS configuration management
+- SQL injection and XSS prevention
+- Container security best practices (see rules for Infrastructure & DevOps)
+
+## Performance Optimization
+
+### Backend Performance
+- Django ORM optimization with select_related/prefetch_related
+- PostgreSQL-specific query optimization
+- Database-based caching for frequently accessed data
+- Background task processing using Django's built-in mechanisms
+- Database indexing and migration optimization
+
+### Frontend Performance
+- Code splitting and lazy loading via Vite
+- Component memoization and state optimization
+- Efficient data fetching with React Query/SWR
+- Bundle size optimization
+- SSE connection management and cleanup (if implemented)
+
+### Infrastructure Performance
+- Nginx optimization for static file serving
+- Container resource allocation and limits
+- Database connection pooling
+- CDN integration for asset delivery
+- Monitoring and alerting systems
+
+## Quality Assurance Requirements
+
+### Testing Standards
+- Minimum 80% code coverage for both frontend and backend
+- Unit tests for all business logic
+- Integration tests for API endpoints
+- End-to-end tests for critical user flows
+- SSE connection and streaming functionality tests (if implemented)
+
+### Documentation Requirements
+- Feature-level README files with usage examples
+- API documentation with OpenAPI/Swagger
+- Architecture decision records for major design choices
+- Deployment and configuration guides
+- Internationalization documentation
+
+## Technology References & Standards
+
+- Django, DRF, PostgreSQL official documentation
+- React, TypeScript, Vite documentation  
+- Docker, Docker Compose, Nginx configuration guides
+- Tailwind CSS design system principles
+- Feature-Driven Design methodology
+- JWT authentication best practices
+- Server-Sent Events implementation patterns (optional)

@@ -1,0 +1,279 @@
+---
+description: whenever knowlege about backend architecture is usefull. describes the software architecture.
+globs: 
+alwaysApply: false
+---
+# React SSE Integration Rules
+
+## Server-Sent Events Implementation
+
+**Authentication Challenge**: Browser EventSource doesn't support custom headers - use polyfill for JWT authentication.
+
+**Connection Management**: Handle reconnection, cleanup, and connection lifecycle properly in React components.
+
+**Real-time State Updates**: Implement incremental state building for streaming content.
+
+## JWT Authentication for SSE
+
+### Option 1: EventSource Polyfill (RECOMMENDED)
+```javascript
+import { EventSourcePolyfill } from 'event-source-polyfill';
+
+const eventSource = new EventSourcePolyfill("/api/stream_ai_response", {
+    headers: { Authorization: `Bearer ${token}` }
+});
+eventSource.onmessage = onMessageHandler;
+```
+
+### Option 2: Query Parameter (Simple but less secure)
+```javascript
+const eventSource = new EventSource(`/api/stream_ai_response?token=${jwtToken}`);
+```
+
+### Option 3: fetch-event-source Alternative
+```javascript
+import { fetchEventSource } from '@microsoft/fetch-event-source';
+
+fetchEventSource('/api/stream_ai_response', {
+    headers: { Authorization: `Bearer ${token}` },
+    onmessage(event) {
+        // Handle message
+    }
+});
+```
+
+## React Integration Pattern
+
+### Basic SSE Hook Implementation
+```jsx
+import { useEffect, useState } from "react";
+
+function useAiStream(prompt, token) {
+  const [message, setMessage] = useState("");
+  const [isComplete, setIsComplete] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!prompt || !token) return;
+
+    const source = new EventSourcePolyfill("/api/stream_ai_response", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    source.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.content) {
+          // Incremental content building
+          setMessage(prev => prev + data.content);
+        }
+      } catch(err) {
+        console.error("Failed to parse SSE data", err);
+        setError("Failed to parse response");
+      }
+    };
+
+    source.addEventListener("done", () => {
+      setIsComplete(true);
+      source.close();
+    });
+
+    source.addEventListener("error", (event) => {
+      const data = JSON.parse(event.data);
+      setError(data.error);
+      source.close();
+    });
+
+    source.onerror = (err) => {
+      console.error("SSE connection error:", err);
+      setError("Connection error");
+      source.close();
+    };
+
+    // Cleanup on unmount
+    return () => {
+      source.close();
+    };
+  }, [prompt, token]);
+
+  return { message, isComplete, error };
+}
+```
+
+## Message Handling Patterns
+
+### Incremental Content Building
+```jsx
+// For KI streaming - append each chunk
+setMessage(prev => prev + data.content);
+
+// For structured updates - merge objects
+setData(prev => ({ ...prev, ...data }));
+
+// For list updates - append to array
+setItems(prev => [...prev, data.item]);
+```
+
+### Event Type Handling
+```javascript
+// Standard data events
+source.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  // Handle regular data
+};
+
+// Named events from Django
+source.addEventListener("done", (event) => {
+  // Stream completed
+  source.close();
+});
+
+source.addEventListener("error", (event) => {
+  const errorData = JSON.parse(event.data);
+  // Handle server-sent errors
+});
+
+source.addEventListener("ping", (event) => {
+  // Keep-alive ping - ignore or log
+});
+```
+
+## Connection Lifecycle Management
+
+### Component Integration
+```jsx
+function AiStreamComponent({ prompt }) {
+  const token = useAuthToken();
+  const { message, isComplete, error } = useAiStream(prompt, token);
+
+  if (error) {
+    return <div className="error">Error: {error}</div>;
+  }
+
+  return (
+    <div>
+      {message ? (
+        <pre className="whitespace-pre-wrap">{message}</pre>
+      ) : (
+        <div className="loading">Waiting for AI response...</div>
+      )}
+      {isComplete && <div className="status">Stream completed</div>}
+    </div>
+  );
+}
+```
+
+### Manual Connection Control
+```jsx
+function ControlledStream() {
+  const [source, setSource] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  const startStream = () => {
+    const newSource = new EventSourcePolyfill("/api/stream", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    newSource.onopen = () => setIsConnected(true);
+    newSource.onerror = () => setIsConnected(false);
+    
+    setSource(newSource);
+  };
+
+  const stopStream = () => {
+    if (source) {
+      source.close();
+      setSource(null);
+      setIsConnected(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (source) source.close();
+    };
+  }, [source]);
+
+  return (
+    <div>
+      <button onClick={startStream} disabled={isConnected}>
+        Start Stream
+      </button>
+      <button onClick={stopStream} disabled={!isConnected}>
+        Stop Stream
+      </button>
+    </div>
+  );
+}
+```
+
+## Error Handling & Reconnection
+
+### Automatic Reconnection Logic
+```javascript
+function useSSEWithReconnect(url, options) {
+  const [reconnectCount, setReconnectCount] = useState(0);
+  const maxReconnects = 5;
+
+  useEffect(() => {
+    let source;
+    let reconnectTimeout;
+
+    const connect = () => {
+      source = new EventSourcePolyfill(url, options);
+      
+      source.onerror = (error) => {
+        source.close();
+        
+        if (reconnectCount < maxReconnects) {
+          const delay = Math.pow(2, reconnectCount) * 1000; // Exponential backoff
+          reconnectTimeout = setTimeout(() => {
+            setReconnectCount(prev => prev + 1);
+            connect();
+          }, delay);
+        }
+      };
+    };
+
+    connect();
+
+    return () => {
+      if (source) source.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
+  }, [url, reconnectCount]);
+}
+```
+
+### Connection Status Indication
+```jsx
+function StreamStatus({ isConnected, error, reconnectCount }) {
+  if (error) {
+    return <div className="status error">Connection Error: {error}</div>;
+  }
+  
+  if (!isConnected && reconnectCount > 0) {
+    return <div className="status warning">Reconnecting... (Attempt {reconnectCount})</div>;
+  }
+  
+  if (isConnected) {
+    return <div className="status success">Connected</div>;
+  }
+  
+  return <div className="status">Connecting...</div>;
+}
+```
+
+## Performance Considerations
+
+### Memory Management
+- Always close EventSource in cleanup functions
+- Avoid creating new connections on every render
+- Use useMemo for connection options if they contain complex objects
+- Clear message buffers when appropriate to prevent memory leaks
+
+### State Optimization
+- Use functional state updates for appending content: `setState(prev => prev + newData)`
+- Debounce rapid updates if messages come too frequently
+- Consider using useReducer for complex state transitions
+- Implement message deduplication if server might send duplicates

@@ -1,0 +1,149 @@
+# Ruleset für Web-Entwicklung mit Django, React, PostgreSQL und Transcription Service im BB-VoxData Projekt
+
+## Allgemeine Kommunikation
+- Der Assistent antwortet in Gesprächen auf Deutsch.
+- Fachsprache wird präzise und korrekt verwendet, insbesondere in Bezug auf Django, React, PostgreSQL, Docker, Nginx und den Transkriptionsservice.
+- Variablenbezeichnungen, Kommentare, Funktionen, Verzeichnisse und alle strukturellen Elemente werden auf Englisch geschrieben.
+
+## Python & Django Grundprinzipien (voxcore Service)
+- Django's eingebaute Funktionen und Tools wo immer möglich nutzen (z.B. ORM, Auth, Forms).
+- Lesbarkeit und Wartbarkeit priorisieren; Django's Coding-Style-Guide befolgen (PEP 8-konform).
+- Beschreibende Variablen- und Funktionsnamen verwenden; Namenskonventionen einhalten (Kleinbuchstaben mit Unterstrichen).
+- Projekt modular mit Django-Apps (`voxcore/apps/`) strukturieren.
+
+## Django/Python-Spezifikationen (voxcore Service)
+- Klassen-basierte Views (CBVs) für komplexere Views, Funktion-basierte Views (FBVs) für einfachere Logik bevorzugen.
+- Django's ORM für Datenbankinteraktionen nutzen; rohe SQL-Abfragen nur bei Performance-Notwendigkeit.
+- Django's eingebautes Benutzermodell und Authentifizierungs-Framework nutzen.
+- Django's Form- und ModelForm-Klassen für serverseitige Validierung einsetzen.
+- MVT-Muster (Model-View-Template/Serializer) strikt befolgen.
+- Middleware sorgfältig für übergreifende Belange einsetzen.
+- Gunicorn als WSGI-Server für das Deployment im Container verwenden.
+
+## Error Handling und Validierung (voxcore & voxtranscribe Services)
+- Fehlerbehandlung auf View-Ebene (Django) bzw. Endpoint-Ebene (Transcription Service) implementieren.
+- Django's Validierungs-Framework für Form- und Modelldaten-Validierung nutzen. Im Transcription Service Pydantic-Modelle oder FastAPI-Validierung verwenden.
+- Try-except-Blöcke für die Behandlung von Ausnahmen in Business-Logik und Views/Endpoints bevorzugen.
+- Aussagekräftige Fehlermeldungen in API-Antworten zurückgeben.
+- Angepasste Fehlerseiten für Django (z.B. 404, 500) in Betracht ziehen.
+
+## PostgreSQL-Spezifische Richtlinien (voxdata-db Service)
+- PostgreSQL-spezifische Felder und Funktionen in Django Models bei Bedarf nutzen (z.B. JSONField, ArrayField).
+- Optimierte Indizierungsstrategie für PostgreSQL implementieren.
+- Django's PostgreSQL-spezifische Abfrageoperatoren nutzen.
+- Migrationen mit Blick auf PostgreSQL-Performance planen.
+- Transaktionsmanagement mit PostgreSQL-Besonderheiten berücksichtigen.
+
+## Backend & Transcription Service Abhängigkeiten
+- **voxcore (Django Backend)**:
+    - `Django` & `Django REST Framework`
+    - `psycopg2` (PostgreSQL Adapter)
+    - `gunicorn` (WSGI Server)
+    - `Redis` (für Caching, potenziell Celery)
+    - `django-environ` (wahrscheinlich für .env Handling)
+    - `Celery` (potenzielle Nutzung für Hintergrundtasks)
+    - `django-debug-toolbar` (für Entwicklung)
+- **voxtranscribe (Transcription Service)**:
+    - `Python 3.10+`
+    - `FastAPI` / `Uvicorn` (wahrscheinlich, basierend auf ASGI/Uvicorn-Nutzung)
+    - `Whisper` (oder spezifiziertes Transkriptionsmodell)
+    - `ffmpeg`, `libsndfile` (Systemabhängigkeiten für Audioverarbeitung)
+    - `torch`, `CUDA`-bezogene Pakete (für GPU-Nutzung)
+    - `Redis` (potenziell für Task-Kommunikation)
+
+## Django-Spezifische Richtlinien (voxcore Service)
+- DRF-Serializers für JSON-Antworten verwenden. Django-Templates primär für das Admin-Interface.
+- Business-Logik in Models, Services oder Forms halten; Views/ViewSets fokussiert auf Request/Response-Handling halten.
+- Django's URL-Dispatcher (`urls.py`) nutzen, um klare und RESTful URL-Muster unter `/api/` zu definieren.
+- Django's Security-Best-Practices anwenden (CSRF, SQL-Injection-Schutz, XSS-Prävention etc.).
+- Django's eingebaute Tools für Testing (unittest, pytest-django) nutzen.
+- Django's Caching-Framework mit **Redis** als Backend nutzen.
+- Django's Middleware gezielt einsetzen.
+
+## Performance-Optimierung (Django & PostgreSQL)
+- Abfrage-Performance mit Django ORM's `select_related` und `prefetch_related` optimieren.
+- Django's Cache-Framework mit **Redis** nutzen.
+- Datenbank-Indizierung und Query-Optimierungstechniken anwenden.
+- Asynchrone Aufgaben (via Celery mit **Redis** als Broker) für langlaufende Operationen wie das Anstoßen/Überwachen von Transkriptionen prüfen/nutzen.
+- Statische Dateibehandlung wird durch **Nginx** über Volumes optimiert (kein WhiteNoise nötig im Django-Service selbst).
+- PostgreSQL-spezifische Query-Optimierungen nutzen.
+
+## React Grundprinzipien (frontend Service)
+- Funktionale Komponenten mit Hooks bevorzugen.
+- Zustandsmanagement mit Context API oder dedizierten Bibliotheken (z.B. Zustand, Redux) je nach Komplexität.
+- **TypeScript** für Typisierung verwenden.
+- Komponentenstruktur nachvollziehbar organisieren (z.B. Atomic Design, Feature-basiert).
+- **Tailwind CSS** für Styling verwenden (konfiguriert in `tailwind.config.js`).
+
+## React-Spezifikationen (frontend Service)
+- **Vite** als Build-Tool und Development-Server nutzen.
+- `React Router` für clientseitiges Routing verwenden.
+- `React Query` oder `SWR` für Daten-Fetching und Cache-Management einsetzen.
+- `ESLint` und `Prettier` für Code-Formatierung und -Qualität nutzen (Konfigurationen vorhanden).
+- `React Testing Library` für Komponententests verwenden.
+- `React-Helmet` oder ähnliches für SEO-Optimierung in Betracht ziehen.
+- Lazy Loading und Code-Splitting (oft durch Vite unterstützt) für Performance nutzen.
+
+## Services Integration (Nginx, Django, React, Transcribe)
+- **Nginx** als Reverse-Proxy: Leitet Anfragen an `frontend`, `backend`, `transcribe` weiter. Liefert `/static` und `/media` aus Volumes.
+- **Django Backend (`voxcore`)**: Stellt die primäre REST-API unter `/api/` bereit. Koordiniert potenziell Transkriptions-Workflows.
+- **React Frontend (`frontend`)**: Interagiert mit der Django-API (`/api/`) und möglicherweise direkt mit Transkriptions-Endpoints über Nginx.
+- **Transcription Service (`voxtranscribe`)**: Stellt Endpunkte unter `/api/v1/transcribe/` (via Nginx) bereit, führt Transkriptionen durch (GPU-beschleunigt). Kommuniziert ggf. mit Backend.
+- API-Endpunkte RESTful gestalten, Versionierung in Betracht ziehen (z.B. `/api/v1/`).
+- **JWT-Authentifizierung** für API-Kommunikation implementieren.
+- **CORS** korrekt im Backend (`settings.py`) und **Nginx** (`app.conf`) konfigurieren.
+- Gemeinsames Validierungsschema zwischen Frontend und Backend etablieren.
+- **Swagger/OpenAPI** für API-Dokumentation nutzen (Empfehlung: `drf-spectacular` für Django).
+
+## Projektstruktur (BB-VoxData)
+```
+bb-voxdata/
+├── voxcore/ # Django Backend ('backend')
+│ ├── apps/ # Django-Apps (z.B. accounts, api, transcriptions)
+│ ├── config/ # Django-Projektkonfiguration (settings.py, urls.py)
+│ ├── manage.py
+│ └── Dockerfile
+├── frontend/ # React Frontend
+│ ├── public/
+│ ├── src/ # React-Komponenten, Seiten, Services etc.
+│ ├── vite.config.ts
+│ ├── tailwind.config.js
+│ └── Dockerfile
+├── voxtranscribe/ # Transcription Service
+│ ├── app/ # Service-Code (FastAPI/Uvicorn)
+│ ├── requirements.txt
+│ └── Dockerfile
+├── nginx/ # Nginx Konfiguration
+│ ├── nginx.conf
+│ ├── conf.d/ # Spezifische Server/Location-Blöcke (app.conf)
+│ └── Dockerfile
+├── postgres/ # PostgreSQL Init Scripts (optional)
+│ └── init/
+├── docker-compose.yml # Docker Compose Konfiguration für alle Services
+├── .env.example # Vorlage für Umgebungsvariablen
+└── README.md # Projektdokumentation
+```
+
+
+## Schlüsselkonventionen
+1. Django's "Convention Over Configuration"-Prinzip befolgen.
+2. Sicherheit und Performance-Optimierung in jeder Entwicklungsphase priorisieren.
+3. Klare und logische Projektstruktur (siehe oben) beibehalten.
+4. Komponenten-basierte Architektur im Backend (Django-Apps), Frontend (React-Komponenten) und durch den separaten **Transcription Service** verwenden.
+5. Einheitliche Namenskonventionen (Englisch) über alle Services hinweg etablieren.
+
+## Infrastruktur & Deployment
+- **Docker** für Containerisierung aller Services verwenden.
+- **Docker Compose** für lokale Entwicklung und Orchestrierung nutzen.
+- Umgebungsvariablen (`.env`-Datei) für Konfiguration verwenden, keine Hardcoded-Secrets.
+- **Nginx** als Reverse-Proxy und für Static/Media-Serving einsetzen.
+- **PostgreSQL** als Datenbank, **Redis** als Cache/Broker.
+- **GPU-Unterstützung** für den `voxtranscribe`-Service über Nvidia Docker Runtime berücksichtigen.
+- PostgreSQL-Backup-Strategie implementieren.
+- **Health-Checks** für alle Services in `docker-compose.yml` definieren und pflegen.
+
+## Hinweise zu Technologien & Dokumentation
+- Django, DRF, PostgreSQL, React, TypeScript Dokumentationen konsultieren.
+- **FastAPI/Uvicorn, Whisper** (oder verwendetes Modell) Dokumentationen für den Transcription Service nutzen.
+- **Nginx, Docker, Docker Compose** Dokumentationen für Infrastruktur und Konfiguration heranziehen.
+- **Tailwind CSS** Dokumentation für Frontend-Styling konsultieren.

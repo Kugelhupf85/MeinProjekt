@@ -1,0 +1,125 @@
+# Mode of Operation: BB-VoxData Fullstack Anwendung
+
+## Überblick
+
+Dieses Dokument beschreibt die grundlegende Nutzung und den Betrieb der BB-VoxData Fullstack-Anwendung. Es werden alle zentralen Komponenten, die Container-Namen, die wichtigsten Docker-Befehle (Windows & Linux), Architekturprinzipien und Besonderheiten für das Arbeiten im Team erläutert.
+
+---
+
+## Architektur-Komponenten
+
+- **nginx** (Reverse Proxy, statische Dateien)
+- **postgresql** (Datenbank)
+- **redis** (Cache, perspektivisch für Caching/Tasks)
+- **engine** (Django Backend, REST API)
+- **frontend** (React/Tailwind, Vite-basiert)
+
+---
+
+## Grundprinzip: Arbeiten ausschließlich im Docker-Verbund
+
+- **Wichtig:** Es werden **keine lokalen Run-Befehle** wie `npm run dev` oder `python manage.py runserver` ausgeführt.
+- **Alle Services werden ausschließlich über Docker Compose** koordiniert und gestartet.
+- Tailwind, Vite, Django, Nginx etc. laufen immer im Container.
+
+---
+
+## Container-Namen (docker-compose.yml)
+
+- **nginx**:          `nginx`
+- **PostgreSQL**:     `postgres`
+- **Redis**:          `redis`
+- **Backend**:        `engine`
+- **Frontend**:       `frontend`
+
+---
+
+## Docker-Befehle (plattformunabhängig)
+
+Alle folgenden Befehle funktionieren identisch unter Windows und Linux:
+
+- **Logs anzeigen:**
+  - `docker compose logs <container>`
+- **Alle Logs (live):**
+  - `docker compose logs -f`
+- **Container starten:**
+  - `docker compose up -d <container>`
+- **Alle Container starten:**
+  - `docker compose up -d`
+- **Container stoppen:**
+  - `docker compose stop <container>`
+- **Alle Container stoppen:**
+  - `docker compose down`
+- **Container neu starten:**
+  - `docker compose restart <container>`
+- **Container neu bauen:**
+  - `docker compose build <container>`
+- **Alle Container neu bauen:**
+  - `docker compose build`
+
+#Anpassen: Prüfen, ob zusätzliche spezifische Kommandos für z.B. Datenbankmigrationen, statische Dateien, oder spezielle Entwicklungs-Workflows dokumentiert werden müssen.
+
+---
+
+## Regeln & Architekturhinweise
+
+- **In jeder Komponente gilt:** Das jeweilige Ruleset (siehe `.cursor/rules/`) ist verbindlich zu beachten.
+- **Frontend:**
+  - Feature Driven Design: Jedes Feature im eigenen Verzeichnis, Komponenten nach Atomic Design.
+  - Keine lokalen Build- oder Run-Befehle, Entwicklung und Tests laufen im Docker-Container.
+- **Backend:**
+  - Feature Driven Design: Für jedes Feature eine eigene Django-App in `engine/apps/`.
+  - 1:1 Endpoint-Mapping: Jeder Endpoint wird in einem eigenen Modul abgebildet.
+  - Serializers werden kontextualisiert pro Feature/Modul organisiert, keine all-in-one Serializer-Module.
+- **Redis:**
+  - Ist vorbereitet, aber noch nicht in die Anwendung integriert. Zukünftiger Einsatz für Caching und Background Tasks (z.B. Celery).
+- **PostgreSQL:**
+  - Die Datenbank wird kontinuierlich erweitert. Ein stabiles, performantes Datenbankkonzept wird aktuell aufgebaut.
+---
+
+## Offene Punkte für eine vollständige Dokumentation (#Anpassen)
+
+Um die Betriebsweise der Fullstack-Anwendung perfekt zu dokumentieren, fehlen aktuell noch folgende Informationen:
+
+1. **Container-Details:**
+    - Exakte Ports, Volumes, Netzwerke und Abhängigkeiten der einzelnen Container.
+    - Welche Umgebungsvariablen werden benötigt und wie werden sie gesetzt?
+2. **Entwicklungs- und Deployment-Workflow:**
+    - Wie läuft der typische Entwicklungsprozess (lokal, Feature-Branch, Pull Request, Review, Merge, Deploy)?
+    - Gibt es automatisierte Tests, Linter, Formatter? Wie werden diese ausgeführt?
+    - Wie sieht der CI/CD-Prozess aus?
+3. **Secrets-Management:**
+    - Wie werden Passwörter, Tokens und andere sensible Daten sicher gehandhabt?
+    - Werden Tools wie Vault, Doppler, AWS Secrets Manager etc. verwendet?
+4. **Backup- und Recovery-Strategien:**
+    - Wie werden Datenbank-Backups erstellt und wiederhergestellt?
+    - Wer ist verantwortlich und wie ist das Vorgehen dokumentiert?
+5. **Monitoring & Logging:**
+    - Welche Tools werden für Monitoring, Logging und Alerting genutzt?
+    - Wie werden Logs zentral gesammelt und ausgewertet?
+6. **Sicherheitskonzepte:**
+    - Welche Sicherheitsmaßnahmen sind auf Netzwerk-, Container- und Anwendungsebene implementiert?
+    - Wie werden Updates und Patches gehandhabt?
+7. **Statische und Medien-Dateien:**
+    - Wie werden statische Dateien und Medien gehandhabt (Speicherort, Auslieferung, Backup)?
+8. **Skalierung & Performance:**
+    - Wie wird horizontale/vertikale Skalierung unterstützt?
+    - Gibt es Loadbalancing, Caching, Query-Optimierung?
+9. **Service-Kommunikation:**
+    - Wie kommunizieren die einzelnen Container/Services miteinander (Netzwerk, API, Events)?
+10. **Onboarding & Offboarding:**
+    - Welche Schritte sind für neue Entwickler:innen nötig, um produktiv zu werden?
+    - Gibt es ein zentrales Onboarding-Dokument?
+
+---
+
+## Zusammenfassung
+
+- **Keine lokalen Entwicklungsbefehle** außerhalb von Docker verwenden.
+- **Alle relevanten Kommandos** (Start, Stop, Logs, Build) erfolgen über Docker Compose.
+- **Architekturprinzipien** (Feature Driven Design, Atomic Design, 1:1 Endpoint-Mapping, kontextualisierte Serializers) sind strikt einzuhalten.
+- **Rulesets** sind für jede Komponente verbindlich.
+
+---
+
+**Bei Fragen oder Unsicherheiten immer Rücksprache mit dem Team oder der technischen Leitung halten!**

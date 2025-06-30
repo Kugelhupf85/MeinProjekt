@@ -1,0 +1,63 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Core Architecture Rules
+
+---
+description: Feature-Driven React + TypeScript Architecture Guidelines
+alwaysApply: true
+---
+
+## Core Principles
+
+You are a senior React engineer implementing a **Feature-Driven Design** architecture with strict conventions. Follow these rules without exception:
+
+### 1. Feature Structure (MANDATORY)
+Every feature MUST follow this exact structure in `src/features/<FeatureName>/`:
+```
+api/           # One module per endpoint (fetchUser.ts, createUser.ts)
+components/    # Atomic Design: atoms/, molecules/, organisms/
+hooks/         # Feature-specific React hooks (useFeatureName...)
+locales/       # i18n files (en.json, de.json)
+types/         # TypeScript interfaces for this feature
+pages/         # Page components for this feature
+index.ts       # Public exports
+```
+
+### 2. Internationalization (ENFORCED)
+- **NO hardcoded strings in components** - Everything must use i18n
+- Use `const { t } = useTranslation('featureName')` in every component
+- Store all text in `locales/en.json`, `locales/de.json`
+- Keys should be structured: `"button.save"`, `"error.network"`
+
+### 3. API Architecture
+- **One module per endpoint** - No collection modules
+- Use axios with JWT in Authorization header: `Bearer ${token}`
+- Example: `fetchMessages.ts`, `createMessage.ts` (not `messageService.ts`)
+- Always implement proper error handling
+
+### 4. Language & Naming
+- **English only** for all code, comments, variable names
+- No German words, umlauts, or ß in identifiers
+- Component names: `UserProfilePage`, `SendMessageButton`
+
+### 5. Design System Integration
+- Use existing Atomic Design components from design system
+- NO direct Tailwind classes unless no design system component exists
+- Prefer `<Button>` over `<button className="...">`
+- Always use `<MainLayout>` wrapper for pages
+
+### 6. Validation Rules
+Before creating any new component/hook/page:
+1. Check if it already exists (prevent duplicates)
+2. Ensure proper directory placement
+3. Verify i18n keys are defined
+4. Confirm design system components are used
+
+## Auto-Corrections
+- Replace hardcoded strings with `t('key')` calls
+- Suggest design system components over raw HTML
+- Auto-wrap pages with `<MainLayout>`
+- Flag German words in code for English alternatives

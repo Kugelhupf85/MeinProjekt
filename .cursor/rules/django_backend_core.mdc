@@ -1,0 +1,177 @@
+---
+description: whenever knowlege about backend architecture is usefull. describes the software architecture.
+globs: 
+alwaysApply: false
+---
+# Django Backend Architecture Rules - Arcanovi Project
+
+## Core Principles
+
+**Feature-Driven Design (FDD)**: Each Django app represents one feature domain with complete aspect-based separation following the EXACT directory structure: `backend/api/apps/{featurename}/` with all subdirectories as specified.
+
+**Clean Architecture**: Maintain strict layering - Domain Models → Service Layer → API Layer → Interface Layer using the prescribed naming conventions without underscores.
+
+**Domain Isolation**: Features communicate only through well-defined interfaces, events, or service calls - never direct model imports between features.
+
+## Feature Structure Standards
+
+### Directory Organization (MANDATORY)
+```
+backend/api/apps/{featurename}/
+├── models/                     # Domain Models (aspektbasiert)
+│   ├── model{aspect1}.py      # z.B. modeluser.py
+│   ├── model{aspect2}.py      # z.B. modelorganization.py
+│   ├── model{aspect3}.py      # z.B. modelteam.py
+│   └── __init__.py            # Zentraler Export aller Models
+├── services/                   # Business Logic & CRUD Operations
+│   ├── crud{aspect1}.py       # z.B. cruduser.py
+│   ├── crud{aspect2}.py       # z.B. crudorganization.py
+│   └── crud{aspect3}.py       # z.B. crudteam.py
+├── api/                       # REST API Layer
+│   ├── endpoints/             # View-Funktionen (aspektbasiert)
+│   │   ├── view{aspect1}.py   # z.B. viewuser.py
+│   │   ├── view{aspect2}.py   # z.B. vieworganization.py
+│   │   └── view{aspect3}.py   # z.B. viewteam.py
+│   ├── serializers/           # DRF Serializers (aspektbasiert)
+│   │   ├── serializer{aspect1}.py
+│   │   ├── serializer{aspect2}.py
+│   │   └── serializer{aspect3}.py
+│   └── urls/                  # URL-Konfiguration (aspektbasiert)
+│       ├── urls{aspect1}.py
+│       ├── urls{aspect2}.py
+│       └── urls{aspect3}.py
+├── listeners/                 # Event Handling & Background Tasks
+│   ├── crud{aspect1}.py       # Django Signals für CRUD-Events
+│   ├── crud{aspect2}.py
+│   ├── streaming{aspect1}.py  # SSE-Events (optional)
+│   ├── tasks{aspect1}.py      # Background Tasks (optional)
+│   └── __init__.py
+├── tests/                     # Test Suite (aspektbasiert)
+│   ├── models/                # Model Tests
+│   │   ├── test{aspect1}models.py
+│   │   └── test{aspect2}models.py
+│   ├── api/                   # API Tests
+│   │   ├── test{aspect1}api.py
+│   │   └── test{aspect2}api.py
+│   ├── services/              # Service Tests
+│   │   ├── test{aspect1}services.py
+│   │   └── test{aspect2}services.py
+│   └── __init__.py
+├── migrations/                # Django Database Migrations
+├── sql/                       # Custom SQL Scripts (optional)
+├── management/                # Django Management Commands
+│   └── commands/
+├── apps.py                    # Django App Configuration
+├── urls.py                    # Haupt-URL-Konfiguration
+└── README.md                  # Feature-Dokumentation
+```
+
+### Aspect-Based File Naming (EXACT CONVENTIONS)
+- Models: `model{aspect}.py` (z.B. `modeluser.py`, `modelorganization.py`)
+- Services: `crud{aspect}.py` (z.B. `cruduser.py`, `crudteam.py`)
+- Views: `view{aspect}.py` (z.B. `viewuser.py`, `viewauthentication.py`)
+- Serializers: `serializer{aspect}.py`
+- URLs: `urls{aspect}.py`
+- Tests: `test{aspect}{layer}.py` (z.B. `testusermodels.py`, `testuserapi.py`)
+
+## Implementation Guidelines
+
+### Models Layer
+- Every model MUST have an `entity_id` field with pattern `{prefix}-{12_digit_id}`
+- Explicit `db_table` definitions following convention: `{feature_prefix}_{aspect}_{entity}`
+- Centralized model exports in `models/__init__.py`
+- Abstract base models in shared/core app for common patterns
+- No business logic in models - keep them as data containers
+
+### Services Layer
+- Static methods for all CRUD operations with clear separation of concerns
+- Comprehensive error handling with proper logging
+- Database transactions for critical operations
+- Type hints for all parameters and return values
+- Services are framework-agnostic - no Django request objects as parameters
+- Services communicate between features through well-defined interfaces
+
+### API Layer
+- Function-based views with explicit decorators for permissions and authentication
+- Separate serializers for input validation and output formatting
+- Consistent error response format across all endpoints
+- JWT authentication integration with proper token validation
+- CORS configuration for React frontend integration
+- SSE endpoints for real-time streaming with proper connection management (optional)
+
+### Event Handling
+- Django signals for CRUD events with audit logging
+- Background tasks using Django's built-in mechanisms or lightweight alternatives
+- SSE streaming for real-time updates (optional, when applicable)
+- Event-driven communication between features to maintain loose coupling
+
+### Testing Requirements
+- Minimum 80% code coverage
+- Separate test files for each layer (models, services, api)
+- Integration tests for complete workflows
+- API tests using Django REST framework test client
+- Mock external dependencies
+- Test SSE connections and streaming functionality (if implemented)
+
+## Security & Performance
+
+### Authentication & Authorization
+- JWT-based authentication for all protected endpoints
+- Role-based access control (RBAC) using Django groups and permissions
+- Permission classes for fine-grained access control
+- No hardcoded permissions in views - use centralized permission system
+
+### Database Optimization
+- Use `select_related()` and `prefetch_related()` for efficient queries
+- Database indexing on frequently filtered fields
+- Pagination for all list endpoints
+- Bulk operations for large data sets
+
+### Caching Strategy
+- Database-based caching for session management and frequent queries
+- Cache invalidation on model updates using Django's cache framework
+- Proper cache key naming conventions
+- No Redis dependency - use Django's database cache backend
+
+## Error Handling & Logging
+
+### Logging Standards
+- Structured logging with appropriate levels (DEBUG, INFO, WARNING, ERROR)
+- Log all critical operations with entity_ids for traceability
+- Separate log files for different components
+- No sensitive data in logs
+
+### Error Management
+- Consistent error response format
+- Proper exception handling in all layers
+- Client-friendly error messages
+- Server error tracking and monitoring integration
+
+## Development Workflow
+
+### Code Quality
+- Type hints for all public methods
+- Comprehensive docstrings following Django conventions
+- Consistent code formatting (Black, flake8)
+- Regular dependency updates with security checks
+
+### Migration Management
+- Descriptive migration names
+- Data migrations separate from schema migrations
+- Backup strategies for production migrations
+- Migration testing in staging environment
+
+### Documentation
+- Feature README with usage examples
+- API documentation with endpoint specifications
+- Architecture decision records for major design choices
+- Deployment and configuration guides
+
+## Background Task Processing
+
+### Without Redis/Celery
+- Use Django's `django.core.management.commands` for scheduled tasks
+- Database-based task queuing for asynchronous operations
+- Consider lightweight alternatives like `django-q` or `django-background-tasks`
+- Simple cron jobs for periodic tasks
+- Proper error handling and retry mechanisms

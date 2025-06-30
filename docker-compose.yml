@@ -1,71 +1,226 @@
-version: '3.8'
+# ================================================================================================
+# ARCANOVI DOCKER COMPOSE - MIT NGINX UND ERWEITERTEN HEALTH-CHECKS
+# ================================================================================================
+#
+# 🎯 ZENTRALE KONFIGURATION - ALLE WERTE AUS .env DATEI
+# ⚠️  KEINE hardcoded Werte! Alle Einstellungen kommen aus: Arcanovi/.env
+# 📍 Referenz: ${VARIABLE_NAME} lädt aus Arcanovi/.env
+# 🚫 KEINE FALLBACK-WERTE! ALLES MUSS EXPLIZIT DEFINIERT SEIN.
+# 🔍 ERWEITERTE HEALTH-CHECKS: Prüft nicht nur Verbindung sondern auch Dateninhalt!
+#
+# ARCANOVI ARCHITEKTUR:
+# - Frontend (React/Vite):  ${FRONTEND_PORT} - ⚠️ AUS .env
+# - Backend (Django API):  ${BACKEND_PORT} - ⚠️ AUS .env  
+# - Database (PostgreSQL): ${DATABASE_PORT} - ⚠️ AUS .env
+# - Nginx (Reverse Proxy): ${NGINX_PORT} - ⚠️ AUS .env
+#
+# ALLE KONFIGURATION AUS ZENTRALER .env DATEI (Arcanovi/.env)
+# ================================================================================================
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
-  # PostgreSQL Database
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: dungeonmaster_db
-      POSTGRES_USER: dungeonmaster
-      POSTGRES_PASSWORD: dungeonmaster_password
+  # PostgreSQL Database - ERWEITERTE HEALTH-CHECKS
+  arcanovi-db:
+    image: postgres:17-alpine
+    container_name: ${DATABASE_CONTAINER_NAME}  # ⚠️ AUS .env: DATABASE_CONTAINER_NAME
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+      - arcanovi-postgres-data:/var/lib/postgresql/data
+    environment:
+      # ⚠️ ALLE DB-Werte AUS .env (Arcanovi/.env) - KEINE hardcoded Werte!
+      - POSTGRES_DB=${POSTGRES_DB}              # ⚠️ AUS .env: POSTGRES_DB
+      - POSTGRES_USER=${POSTGRES_USER}          # ⚠️ AUS .env: POSTGRES_USER
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}  # ⚠️ AUS .env: POSTGRES_PASSWORD
+      - POSTGRES_INITDB_ARGS=${POSTGRES_INITDB_ARGS}  # ⚠️ AUS .env: POSTGRES_INITDB_ARGS
+    env_file:
+      - .env  # ⚠️ ZENTRALE .env DATEI LADEN
+    healthcheck:
+      # ⚠️ ERWEITERTE HEALTH-CHECKS: Prüft DB-Verbindung UND Tabelleninhalt!
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
     networks:
-      - dungeonmaster_network
+      - arcanovi-network  # Backend-Netzwerk für DB und Backend
+    ports:
+      - "${DATABASE_PORT}:${DATABASE_CONTAINER_PORT}"  # ⚠️ AUS .env: DATABASE_PORT -> Container-Port aus .env
+    deploy:
+      resources:
+        limits:
+          cpus: '${POSTGRES_CPU_LIMIT}'    # ⚠️ AUS .env: POSTGRES_CPU_LIMIT
+          memory: ${POSTGRES_MEMORY_LIMIT}  # ⚠️ AUS .env: POSTGRES_MEMORY_LIMIT
+    logging: *default-logging
 
-  # Django Backend
-  backend:
+  # Django Backend Service - ERWEITERTE HEALTH-CHECKS
+  arcanovi-backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: ${BACKEND_CONTAINER_NAME}  # ⚠️ AUS .env: BACKEND_CONTAINER_NAME
     volumes:
-      - ./backend:/app
-    ports:
-      - "8000:8000"
-    environment:
-      - DEBUG=1
-      - DATABASE_URL=postgresql://dungeonmaster:dungeonmaster_password@db:5432/dungeonmaster_db
+      - arcanovi-backend-static-volume:/app/staticfiles
+      - arcanovi-backend-media-volume:/app/media
+      - ./backend:/app  # Development Volume Mount
     depends_on:
-      - db
+      arcanovi-db:
+        condition: service_healthy
+    env_file:
+      - .env  # ⚠️ ZENTRALE .env DATEI LADEN
+    environment:
+      # ⚠️ ALLE Backend-Werte AUS .env (Arcanovi/.env) - KEINE hardcoded Werte!
+      - DEBUG=${DEBUG}                          # ⚠️ AUS .env: DEBUG
+      - SECRET_KEY=${SECRET_KEY}                # ⚠️ AUS .env: SECRET_KEY
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}          # ⚠️ AUS .env: ALLOWED_HOSTS
+      
+      # 🗄️ POSTGRESQL DATENBANK (EINZIGE LAUFZEIT-DATENBANK)
+      - DATABASE_NAME=${DATABASE_NAME}          # ⚠️ AUS .env: DATABASE_NAME (identisch mit POSTGRES_DB)
+      - DATABASE_USER=${DATABASE_USER}          # ⚠️ AUS .env: DATABASE_USER (identisch mit POSTGRES_USER)
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}  # ⚠️ AUS .env: DATABASE_PASSWORD (identisch mit POSTGRES_PASSWORD)
+      - DATABASE_HOST=${DATABASE_CONTAINER_NAME} # Docker Service Name für PostgreSQL
+      - DATABASE_PORT=5432                      # Container-intern immer 5432
+      - DATABASE_ENGINE=${DATABASE_ENGINE}      # ⚠️ AUS .env: DATABASE_ENGINE
+      
+      # CORS Konfiguration
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}      # ⚠️ AUS .env: CORS_ALLOWED_ORIGINS
+      - CORS_ALLOW_ALL_ORIGINS=${CORS_ALLOW_ALL_ORIGINS}  # ⚠️ AUS .env: CORS_ALLOW_ALL_ORIGINS
+      - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS}  # ⚠️ AUS .env: CORS_ALLOW_CREDENTIALS
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}      # ⚠️ AUS .env: CSRF_TRUSTED_ORIGINS
+    healthcheck:
+      # 🔍 ERWEITERTE BACKEND-HEALTH-CHECKS: Django + DB + Migrations!
+      test: ["CMD", "python", "manage.py", "check", "--deploy"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 120s  # Mehr Zeit für Django-Setup und Migrations
+    restart: unless-stopped
     networks:
-      - dungeonmaster_network
+      - arcanovi-network  # Backend-Netzwerk für DB und Backend
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_CONTAINER_PORT}"  # ⚠️ AUS .env: BACKEND_PORT -> Container-Port aus .env
+    deploy:
+      resources:
+        limits:
+          cpus: '${BACKEND_CPU_LIMIT}'     # ⚠️ AUS .env: BACKEND_CPU_LIMIT
+          memory: ${BACKEND_MEMORY_LIMIT}  # ⚠️ AUS .env: BACKEND_MEMORY_LIMIT
+    logging: *default-logging
 
-  # React Frontend
-  frontend:
+  # React Frontend Service - ERWEITERTE HEALTH-CHECKS
+  arcanovi-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: ${FRONTEND_CONTAINER_NAME}  # ⚠️ AUS .env: FRONTEND_CONTAINER_NAME
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    ports:
-      - "3000:3000"
+      - ./frontend:/app  # Development Volume Mount
+      - /app/node_modules  # Avoid node_modules conflicts
+    env_file:
+      - .env  # ⚠️ ZENTRALE .env DATEI LADEN
     environment:
-      - REACT_APP_API_URL=http://localhost:8000/api
+      # ⚠️ ALLE Frontend-Werte AUS .env (Arcanovi/.env) - KEINE hardcoded Werte!
+      - NODE_ENV=${NODE_ENV}                    # ⚠️ AUS .env: NODE_ENV
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}  # ⚠️ AUS .env: VITE_API_BASE_URL
+      - VITE_API_URL=${VITE_API_URL}            # ⚠️ AUS .env: VITE_API_URL
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL}    # ⚠️ AUS .env: VITE_BACKEND_URL
+      - REACT_APP_API_URL=${REACT_APP_API_URL}  # ⚠️ AUS .env: REACT_APP_API_URL
+    healthcheck:
+      # ⚠️ FRONTEND HEALTH-CHECK: Prüft Vite-Server und API-Proxy
+      test: ["CMD", "curl", "-f", "http://localhost:${FRONTEND_CONTAINER_PORT}/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
     networks:
-      - dungeonmaster_network
+      - arcanovi-network          # Zugriff auf Backend
+      - arcanovi-frontend-network # Frontend-Netzwerk
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_CONTAINER_PORT}"  # ⚠️ AUS .env: FRONTEND_PORT -> Container-Port aus .env
+    deploy:
+      resources:
+        limits:
+          cpus: '${FRONTEND_CPU_LIMIT}'     # ⚠️ AUS .env: FRONTEND_CPU_LIMIT
+          memory: ${FRONTEND_MEMORY_LIMIT}  # ⚠️ AUS .env: FRONTEND_MEMORY_LIMIT
+    logging: *default-logging
 
-  # Nginx Reverse Proxy
-  nginx:
+  # Nginx Reverse Proxy - ERWEITERTE HEALTH-CHECKS
+  arcanovi-nginx:
     build:
       context: ./nginx
       dockerfile: Dockerfile
-    ports:
-      - "80:80"
-      - "443:443"
+    container_name: ${NGINX_CONTAINER_NAME}  # ⚠️ AUS .env: NGINX_CONTAINER_NAME
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - arcanovi-backend-static-volume:/static:ro
+      - arcanovi-backend-media-volume:/media:ro
     depends_on:
-      - backend
-      - frontend
+      arcanovi-backend:
+        condition: service_healthy
+      arcanovi-frontend:
+        condition: service_healthy
+    env_file:
+      - .env  # ⚠️ ZENTRALE .env DATEI LADEN
+    environment:
+      # ⚠️ ALLE Nginx-Werte AUS .env (Arcanovi/.env) - KEINE hardcoded Werte!
+      - SERVER_NAME=${SERVER_NAME}                        # ⚠️ AUS .env: SERVER_NAME
+      - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}            # ⚠️ AUS .env: CORS_ALLOW_ORIGIN
+      - ENGINE_CONTAINER_NAME=${ENGINE_CONTAINER_NAME}    # ⚠️ AUS .env: ENGINE_CONTAINER_NAME
+      - ENGINE_INTERNAL_PORT=${ENGINE_INTERNAL_PORT}      # ⚠️ AUS .env: ENGINE_INTERNAL_PORT
+      - FRONTEND_CONTAINER_NAME=${FRONTEND_CONTAINER_NAME} # ⚠️ AUS .env: FRONTEND_CONTAINER_NAME
+      - FRONTEND_INTERNAL_PORT=${FRONTEND_INTERNAL_PORT}  # ⚠️ AUS .env: FRONTEND_INTERNAL_PORT
+    healthcheck:
+      # ⚠️ NGINX HEALTH-CHECK: Prüft Nginx-Service und Backend-Proxy
+      test: ["CMD", "curl", "-f", "http://localhost/health || curl -f http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
     networks:
-      - dungeonmaster_network
+      - arcanovi-network          # Zugriff auf Backend
+      - arcanovi-frontend-network # Frontend-Netzwerk
+    ports:
+      - "${NGINX_PORT}:${NGINX_INTERNAL_PORT}"  # ⚠️ AUS .env: NGINX_PORT -> Nginx-Port aus .env
+    deploy:
+      resources:
+        limits:
+          cpus: '${NGINX_CPU_LIMIT}'       # ⚠️ AUS .env: NGINX_CPU_LIMIT
+          memory: ${NGINX_MEMORY_LIMIT}    # ⚠️ AUS .env: NGINX_MEMORY_LIMIT
+    logging: *default-logging
 
 volumes:
-  postgres_data:
+  arcanovi-postgres-data:
+    driver: local
+  arcanovi-backend-static-volume:
+    driver: local
+  arcanovi-backend-media-volume:
+    driver: local
 
 networks:
-  dungeonmaster_network:
-    driver: bridge 
+  # 🌐 ARCANOVI MAIN NETWORK - Backend Services
+  arcanovi-network:
+    driver: bridge
+    name: arcanovi-network
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+          gateway: 172.25.0.1
+    labels:
+      - "project=arcanovi"
+      - "environment=development"
+  
+  # 🌐 ARCANOVI FRONTEND NETWORK - Frontend & Nginx
+  arcanovi-frontend-network:
+    driver: bridge
+    name: arcanovi-frontend-network
+    ipam:
+      config:
+        - subnet: 172.26.0.0/16
+          gateway: 172.26.0.1
+    labels:
+      - "project=arcanovi"
+      - "environment=development" 

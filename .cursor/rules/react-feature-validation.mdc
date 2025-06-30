@@ -1,0 +1,160 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Code Validation & Quality Enforcement
+
+---
+description: Automated checks and validations for code quality
+alwaysApply: true
+---
+
+## Automatic Validations
+
+Perform these checks on every code generation/modification:
+
+### 1. i18n Compliance Detection
+```typescript
+// ❌ FORBIDDEN - Any hardcoded UI text
+<Button>Save</Button>
+<div>Error loading data</div>
+<input aria-label="Email address" />
+<form aria-describedby="Login form" />
+
+// ✅ REQUIRED - All text through useTranslation
+const { t } = useTranslation(['featureName', 'common']);
+<Button>{t('button.save')}</Button>
+<div>{t('error.loadFailed')}</div>
+<input aria-label={t('a11y.emailInput')} />
+<form aria-describedby={t('a11y.loginForm')} />
+```
+
+**Auto-fix Strategy**:
+1. Replace hardcoded strings with `t('suggested.key')`
+2. Add key to appropriate namespace file:
+   - Feature text → `src/features/{feature}/locales/{lang}/{namespace}.json`
+   - Global text → `src/locales/{lang}/common.json`
+   - ARIA labels → under `a11y` section
+3. Check if namespace is registered in `src/locales/i18n.ts`
+
+### 2. Design System Enforcement
+```typescript
+// ❌ AVOID
+<button className="bg-blue-500 px-4 py-2">Click me</button>
+<div className="flex items-center">...</div>
+
+// ✅ PREFER
+<Button variant="primary">Click me</Button>
+<Container layout="flex-center">...</Container>
+```
+
+**Auto-suggestion**: When detecting raw HTML + Tailwind, suggest design system alternative
+
+### 3. Feature Structure Validation
+Check that files are in correct directories:
+- React hooks → `hooks/` directory
+- API functions → `api/` directory  
+- Type definitions → `types/` directory
+- Page components → `pages/` directory
+
+### 4. Duplicate Prevention
+Before creating new files, scan for:
+- Existing components with same name
+- Similar hooks or utilities
+- Duplicate route paths
+- Existing API modules for same endpoint
+
+### 5. Language Compliance
+Detect non-English identifiers:
+```typescript
+// ❌ FORBIDDEN
+const benutzerName = "John";
+const fetchBenutzerDaten = () => {};
+
+// ✅ REQUIRED
+const userName = "John";
+const fetchUserData = () => {};
+```
+
+### 6. Layout Enforcement
+Every page component must use layout wrapper:
+```typescript
+// ❌ MISSING LAYOUT
+export const UserPage = () => {
+  return <div>Content</div>;
+};
+
+// ✅ CORRECT
+export const UserPage = () => {
+  return (
+    <MainLayout>
+      <div>Content</div>
+    </MainLayout>
+  );
+};
+```
+
+### 7. API Pattern Validation
+Ensure proper API structure:
+```typescript
+// ❌ WRONG - Multiple endpoints in one file
+export const userService = {
+  getUsers: () => fetch('/users'),
+  createUser: () => fetch('/users', {method: 'POST'}),
+  deleteUser: () => fetch('/users/1', {method: 'DELETE'})
+};
+
+// ✅ CORRECT - One file per endpoint
+// api/fetchUsers.ts
+export const fetchUsers = () => axiosInstance.get('/users');
+
+// api/createUser.ts  
+export const createUser = (data) => axiosInstance.post('/users', data);
+```
+
+## Error Messages & Suggestions
+
+When validation fails, provide specific guidance:
+- "Hardcoded string detected in JSX. Use t('suggested.key') instead and add to {namespace}.json"
+- "ARIA label not localized. Move to a11y section: t('a11y.suggested')"  
+- "Raw button element found. Use <Button> from design system"
+- "Hook placed in wrong directory. Move to features/[name]/hooks/"
+- "Translation namespace 'users' not registered in i18n.ts"
+- "Missing translation file: src/features/{feature}/locales/de/{namespace}.json"
+- "Component name uses German. Suggest English alternative: {suggestion}"
+
+## Integration Points
+
+Validate integration between features:
+- Check route uniqueness across all features
+- Verify type imports use proper feature exports
+- Ensure shared components come from design system
+- Confirm API calls use centralized axios instance with auth headers
+- Validate i18n namespace registration and file structure consistency
+
+### 8. i18n Structure Validation
+Ensure proper internationalization setup:
+```typescript
+// ❌ WRONG - Missing namespace registration
+// Component uses 'users' namespace but it's not in i18n.ts
+
+// ❌ WRONG - Hardcoded ARIA labels
+<button aria-label="Save changes">Save</button>
+
+// ❌ WRONG - Mixed hardcoded and localized text
+<div>Welcome {t('user.name')}!</div>
+
+// ✅ CORRECT - Proper namespace usage
+const { t } = useTranslation(['users', 'common']);
+<button aria-label={t('a11y.saveButton')}>{t('button.save')}</button>
+
+// ✅ CORRECT - Parameterized translations
+<div>{t('welcome.message', { name: user.name })}</div>
+```
+
+**File Structure Checks**:
+- Verify translation files exist in both `de/` and `en/` subdirectories
+- Check that namespaces are registered in `src/locales/i18n.ts`
+- Ensure `a11y` section exists for accessibility labels
+- Validate JSON structure consistency across languages

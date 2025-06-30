@@ -1,0 +1,183 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Internationalization (i18n) Guide
+
+---
+description: Complete guide for react-i18next implementation in BB-VoxData Frontend
+globs: ["src/features/**/locales/**/*", "src/locales/**/*", "**/*.tsx", "**/*.ts"]
+alwaysApply: false
+---
+
+## Core Principles
+
+Internationalization uses **react-i18next** with modular JSON organization. All UI text must be localized - **no hardcoded strings allowed**. Language switching is dynamic and persisted in Local Storage.
+
+## File Structure & Organization
+
+### Directory Architecture
+
+```
+src/
+├── locales/
+│   ├── i18n.ts                     # Central configuration & setup
+│   ├── de/common.json              # Global German translations
+│   └── en/common.json              # Global English translations
+└── features/
+    └── [feature]/
+        └── locales/
+            ├── de/[namespace].json  # Feature-specific German
+            └── en/[namespace].json  # Feature-specific English
+```
+
+### File Responsibility Matrix
+
+| File/Directory | Scope | Content Type |
+|---|---|---|
+| `src/locales/i18n.ts` | Global | Configuration, namespace registration, language detection |
+| `src/locales/[lang]/common.json` | Global | Navigation, footer, shared UI elements |
+| `src/features/[feature]/locales/[lang]/[namespace].json` | Feature | Feature-specific content, forms, error messages |
+
+## Translation Structure Standards
+
+### JSON Organization Pattern
+
+Every translation file must follow this structure:
+
+```json
+{
+  "title": "Feature Title",
+  "button": {
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "error": {
+    "network": "Network error occurred"
+  },
+  "a11y": {
+    "main": "Main content area",
+    "saveButton": "Save your changes",
+    "formSection": "User input form"
+  }
+}
+```
+
+### Accessibility (a11y) Requirements
+
+**MANDATORY**: All accessibility attributes must be localized under the `a11y` key:
+
+- **ARIA labels** (`aria-label`, `aria-labelledby`, `aria-describedby`)
+- **Screen reader texts** for dynamic content
+- **Form field descriptions** and error announcements
+- **Navigation landmarks** and section descriptions
+
+#### a11y Key Naming Conventions
+
+| Element Type | Naming Pattern | Example |
+|---|---|---|
+| Buttons | `[action]Button` | `saveButton`, `deleteButton` |
+| Forms | `[purpose]Form` | `loginForm`, `contactForm` |
+| Sections | `[content]Section` | `navigationSection`, `contentSection` |
+| Status | `[state]Status` | `loadingStatus`, `errorStatus` |
+
+## Component Integration Patterns
+
+### useTranslation Hook Usage
+
+**Single Namespace** (most common):
+```tsx
+const { t } = useTranslation('featureName');
+```
+
+**Multiple Namespaces** (when mixing feature + global content):
+```tsx
+const { t } = useTranslation(['featureName', 'common']);
+```
+
+### Accessibility Implementation
+
+Always localize accessibility attributes:
+```tsx
+<form aria-label={t('a11y.loginForm')}>
+  <input aria-label={t('a11y.emailInput')} />
+  <button aria-label={t('a11y.submitButton')}>
+    {t('button.submit')}
+  </button>
+</form>
+```
+
+## Feature Development Workflow
+
+### 1. Planning Phase
+- **Identify all user-facing text** in the feature
+- **Map text to appropriate namespace** (feature vs. common)
+- **Plan accessibility requirements** and screen reader needs
+
+### 2. Structure Setup
+```
+features/newFeature/
+├── locales/
+│   ├── de/newFeature.json
+│   └── en/newFeature.json
+└── components/
+```
+
+### 3. Translation File Creation
+- **Start with English** as base language
+- **Include a11y section** from the beginning
+- **Use consistent key structure** across languages
+
+### 4. Namespace Registration
+- **Add imports** to `src/locales/i18n.ts`
+- **Register in resources object** for all languages
+- **Add to namespace array** in configuration
+
+## Language Management
+
+### Adding New Languages
+
+1. **Create directory structure** for new language code
+2. **Copy translation files** from existing language
+3. **Translate all content** including a11y keys
+4. **Register in i18n.ts** configuration
+5. **Update language selector** components
+
+### Translation Key Guidelines
+
+| Key Type | Structure | Example |
+|---|---|---|
+| Simple text | `keyName` | `title`, `description` |
+| Grouped actions | `group.action` | `button.save`, `error.network` |
+| Accessibility | `a11y.element` | `a11y.saveButton`, `a11y.mainSection` |
+
+## Quality Assurance
+
+### Pre-Development Checklist
+- [ ] No hardcoded strings in any component
+- [ ] All ARIA attributes use `t('a11y.key')`
+- [ ] Translation keys follow naming conventions
+- [ ] Both German and English files created
+- [ ] Namespace registered in i18n.ts
+
+### Common Anti-Patterns to Avoid
+- **Hardcoded ARIA labels**: `aria-label="Save"` ❌
+- **Mixed localized/hardcoded**: `"Welcome " + t('user.name')` ❌
+- **Missing a11y keys**: No accessibility translations ❌
+- **Unregistered namespaces**: Using namespace without registration ❌
+
+## Integration with Design System
+
+### Component Localization
+- **Form components** must accept localized labels and errors
+- **Button variants** should support localized text
+- **Modal/Dialog** components need localized titles and actions
+- **Status indicators** require localized announcements for screen readers
+
+### Responsive Text Handling
+- **Short/long text variants** for responsive layouts
+- **Truncation considerations** for different language lengths
+- **Icon-only buttons** still need `aria-label` translations
+
+This structure ensures consistent, accessible, and maintainable internationalization across the entire BB-VoxData frontend while supporting future expansion to additional languages and features.

@@ -1,0 +1,557 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# VoxData-Datenbank: Vollständige Dokumentation
+
+## 1. Übersicht
+
+Diese Dokumentation beschreibt die vollständige Datenbankstruktur des VoxData-Systems. Das System ist in mehrere Django-Apps unterteilt, jede mit eigenen Modellen, die zusammen eine umfassende Multi-Tenant-Plattform für KI-Assistenten bilden.
+
+Das System verwendet:
+- Eine hierarchische Struktur (Organisation -> Teams -> Benutzer)
+- Zwei parallele Assistenten-Frameworks (Haupt- und Helper-Assistenten)
+- Ein flexibles Medienmanagement-System
+- Umfassende Nutzungs- und Abrechnungsmechanismen
+
+## 2. Organisationsstruktur & Benutzer
+
+### 2.1 Organization (apps.organization.models.organization)
+
+```python
+class Organization(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=100, unique=True, blank=True)
+    logo_url = models.URLField(blank=True, null=True)  # Legacy-Feld
+    settings = models.JSONField(default=dict, blank=True)
+    
+    # Billing-Felder
+    balance = models.DecimalField(max_digits=20, decimal_places=6, default=Decimal('0'))
+    billing_type = models.CharField(max_length=50, default='prepaid')
+    credit_limit = models.DecimalField(max_digits=20, decimal_places=6, default=Decimal('0'))
+    
+    # Quota-Felder
+    quota_limit = models.IntegerField(default=0)
+    quota_used = models.IntegerField(default=0)
+    
+    # Zeitstempel
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Generic Relation für Medien
+    images = GenericRelation(ImageFile, content_type_field='content_type', 
+                            object_id_field='object_id', related_query_name='organization')
+```
+
+**Schlüsselbeziehungen:**
+- `teams` (related_name): Alle Teams der Organisation
+- `users` (related_name): Alle Benutzer der Organisation
+- `images`: Medienanhänge (insb. Logos) der Organisation
+
+**Funktionen:**
+- `get_quota_percentage()`: Berechnet den Prozentsatz des genutzten Kontingents
+- `has_available_quota(amount)`: Prüft, ob ausreichend Kontingent verfügbar ist
+- `use_quota(amount)`: Verbraucht Kontingent, wenn verfügbar
+- `logo`: Property, gibt das Logo der Organisation zurück
+- `save_logo(file, filename, description)`: Speichert ein neues Logo
+
+### 2.2 Team (apps.organization.models.team)
+
+```python
+class Team(models.Model):
+    name = models.CharField(max_length=255)
+    organization = models.ForeignKey('organization.Organization', on_delete=models.CASCADE, related_name='teams')
+    settings = models.JSONField(default=dict, blank=True)
+    
+    # Billing-Felder
+    has_separate_billing = models.BooleanField(default=False)
+    balance = models.DecimalField(max_digits=20, decimal_places=6, null=True, blank=True)
+    quota_limit = models.IntegerField(null=True, blank=True)
+    quota_used = models.IntegerField(default=0)
+    
+    # Zeitstempel
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Mitglieder
+    members = models.ManyToManyField('organization.User', through='organization.TeamMembership', 
+                                     related_name='teams')
+```
+
+**Schlüsselbeziehungen:**
+- `organization`: Die zugehörige Organisation
+- `members`: Die Teammitglieder (über TeamMembership)
+
+**Funktionen:**
+- `get_active_members()`: Gibt alle aktiven Mitglieder zurück
+- `get_member_count()`: Gibt die Anzahl der Teammitglieder zurück
+- `has_member(user)`: Prüft, ob ein Benutzer Mitglied ist
+- `add_member(user)`: Fügt einen Benutzer zum Team hinzu
+- `remove_member(user)`: Entfernt einen Benutzer aus dem Team
+- `get_quota_percentage()`: Berechnet den Prozentsatz des genutzten Kontingents
+
+### 2.3 TeamMembership (apps.organization.models.team)
+
+```python
+class TeamMembership(models.Model):
+    user = models.ForeignKey('organization.User', on_delete=models.CASCADE)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    role = models.CharField(max_length=50, default='member')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+```
+
+**Schlüsselbeziehungen:**
+- `user`: Der Benutzer, der Mitglied ist
+- `team`: Das Team, zu dem der Benutzer gehört
+
+**Einschränkungen:**
+- `unique_together = ['user', 'team']`: Jede Kombination aus Benutzer und Team darf nur einmal existieren
+- Benutzer und Team müssen zur selben Organisation gehören
+
+### 2.4 User (apps.organization.models.user)
+
+```python
+class User(AbstractUser):
+    organization = models.ForeignKey('organization.Organization', on_delete=models.CASCADE, related_name='users')
+    settings = models.JSONField(default=dict, blank=True)
+    last_active = models.DateTimeField(null=True, blank=True)
+```
+
+**Schlüsselbeziehungen:**
+- `organization`: Die Organisation, zu der der Benutzer gehört
+- `teams` (related_name): Teams, in denen der Benutzer Mitglied ist
+- `billing_limits` (related_name): Abrechnungslimits für den Benutzer
+
+**Funktionen:**
+- `get_teams()`: Gibt alle Teams zurück, in denen der Benutzer Mitglied ist
+- `is_team_member(team)`: Prüft, ob der Benutzer Mitglied eines Teams ist
+- `join_team(team)`: Fügt den Benutzer einem Team hinzu
+- `leave_team(team)`: Entfernt den Benutzer aus einem Team
+- `get_organization_data()`: Gibt wichtige Organisationsdaten für das Frontend zurück
+
+### 2.5 UserBillingLimits (apps.organization.models.billing)
+
+```python
+class UserBillingLimits(models.Model):
+    organization = models.ForeignKey('organization.Organization', on_delete=models.CASCADE, 
+                                     related_name='user_billing_limits')
+    team = models.ForeignKey('organization.Team', on_delete=models.CASCADE, null=True, blank=True, 
+                             related_name='user_billing_limits')
+    user = models.ForeignKey('organization.User', on_delete=models.CASCADE, related_name='billing_limits')
+    
+    has_separate_billing = models.BooleanField(default=False)
+    balance_limit = models.DecimalField(max_digits=20, decimal_places=6, null=True, blank=True)
+    usage_period = models.CharField(max_length=50, null=True, blank=True)
+    period_limit = models.DecimalField(max_digits=20, decimal_places=6, null=True, blank=True)
+    current_period_usage = models.DecimalField(max_digits=20, decimal_places=6, default=Decimal('0.0'))
+    period_start_date = models.DateTimeField(null=True, blank=True)
+    
+    # Zeitstempel
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+```
+
+**Schlüsselbeziehungen:**
+- `organization`: Die Organisation des Benutzers
+- `team`: Optional das Team, wenn teambezogene Limits
+- `user`: Der Benutzer, für den die Limits gelten
+
+**Einschränkungen:**
+- `unique_together = ['organization', 'team', 'user']`: Jede Kombination darf nur einmal existieren
+- Benutzer und Team müssen zur selben Organisation gehören
+
+## 3. Assistenten & KI-Anbieter
+
+### 3.1 Assistant (apps.assistant.models.assistant)
+
+```python
+class Assistant(models.Model):
+    # Grundlegende Informationen
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True, null=True, blank=True)
+    description = models.TextField(max_length=20000)  # ~10 DIN A4 Seiten
+    created_by_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_assistants')
+    
+    # Sichtbarkeitseinstellungen
+    VISIBILITY_CHOICES = [('user', 'User'), ('team', 'Team'), ('org', 'Organization')]
+    visibility_level = models.CharField(max_length=20, choices=VISIBILITY_CHOICES)
+    visible_to_users = models.ManyToManyField(User, related_name='accessible_assistants', blank=True)
+    visible_to_teams = models.ManyToManyField(Team, related_name='accessible_assistants', blank=True)
+    visible_to_orgs = models.ManyToManyField(Organization, related_name='accessible_assistants', blank=True)
+    
+    # KI-Provider-Konfiguration
+    AI_PROVIDER_CHOICES = [('anthropic', 'Anthropic (Claude)'), 
+                           ('gemini', 'Google Gemini'), 
+                           ('openai', 'OpenAI (GPT)')]
+    ai_provider = models.CharField(max_length=50, choices=AI_PROVIDER_CHOICES, default='openai')
+    ai_provider_config = models.JSONField(default=dict, blank=True)
+    
+    # Konfigurationseinstellungen
+    settings = models.JSONField(default=dict, blank=True)
+    design_settings = models.JSONField(default=dict, blank=True)
+    capabilities = models.JSONField(default=dict, blank=True)
+    model_config = models.JSONField(default=dict, blank=True)
+    
+    # Status-Flags
+    is_shown = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
+    is_template = models.BooleanField(default=False)
+    
+    # Nutzungsstatistiken
+    usage_count = models.IntegerField(default=0)
+    total_spent = models.DecimalField(max_digits=12, decimal_places=4, default=Decimal('0.0'))
+    
+    # Zeitstempel
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+```
+
+**Schlüsselbeziehungen:**
+- `created_by_user`: Der Benutzer, der den Assistenten erstellt hat
+- `visible_to_users`: Benutzer, die Zugriff auf den Assistenten haben
+- `visible_to_teams`: Teams, die Zugriff auf den Assistenten haben
+- `visible_to_orgs`: Organisationen, die Zugriff auf den Assistenten haben
+- `usage_stats` (related_name): Nutzungsstatistiken für den Assistenten
+
+**Funktionen:**
+- `increment_usage(cost)`: Erhöht die Nutzungszähler und aktualisiert den Zeitstempel
+- `is_accessible_by_user(user)`: Prüft, ob ein Benutzer Zugriff auf den Assistenten hat
+
+### 3.2 AssistantUsageStats (apps.assistant.models.usage_stats)
+
+```python
+class AssistantUsageStats(models.Model):
+    assistant = models.ForeignKey(Assistant, on_delete=models.CASCADE, related_name='usage_stats')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assistant_usage_stats')
+    tokens_used = models.IntegerField(default=0)
+    request_cost = models.DecimalField(max_digits=10, decimal_places=4, default=Decimal('0.0'))
+    timestamp = models.DateTimeField(auto_now_add=True)
+```
+
+**Schlüsselbeziehungen:**
+- `assistant`: Der Assistent, der genutzt wurde
+- `user`: Der Benutzer, der den Assistenten genutzt hat
+
+**Funktionen:**
+- `record_usage(assistant, user, tokens_used, request_cost)`: Klassenmethode zur Aufzeichnung einer Nutzung
+
+### 3.3 AIProviderConfig (apps.ai_providers.models)
+
+```python
+class AIProviderConfig(models.Model):
+    PROVIDER_CHOICES = [('anthropic', 'Anthropic (Claude)'), 
+                         ('gemini', 'Google Gemini'), 
+                         ('openai', 'OpenAI (GPT)')]
+    
+    name = models.CharField(max_length=100)
+    provider_type = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
+    api_key = models.CharField(max_length=255, blank=True, null=True)
+    default_model = models.CharField(max_length=100, blank=True, null=True)
+    config = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    # Zeitstempel
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+```
+
+**Funktionen:**
+- `get_default_config()`: Gibt die Standardkonfiguration für diesen Provider-Typ zurück
+- `get_full_config()`: Gibt die vollständige Konfiguration zurück (Standard + benutzerdefiniert)
+
+### 3.4 AssistantConfig (apps.helper_assistant.models)
+
+```python
+class AssistantConfig(models.Model):
+    name = models.CharField(max_length=100)
+    provider = models.CharField(max_length=50)
+    model = models.CharField(max_length=100)
+    temperature = models.FloatField(default=1.0)
+    max_tokens = models.IntegerField(default=8192)
+    system_prompt = models.TextField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    
+    # Zeitstempel
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+```
+
+**Schlüsselbeziehungen:**
+- `conversations` (related_name): Konversationen mit diesem Assistenten
+
+## 4. Konversationen & Nachrichten
+
+### 4.1 Conversation (apps.helper_assistant.models)
+
+```python
+class Conversation(models.Model):
+    uuid = models.UUIDField(default=None, null=True, blank=True, unique=True)
+    assistant_config = models.ForeignKey(AssistantConfig, on_delete=models.CASCADE, related_name="conversations")
+    user_id = models.CharField(max_length=100)
+    title = models.CharField(max_length=200, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    
+    # Felder für temporäre Chats
+    is_temporary = models.BooleanField(default=False)
+    auto_delete_date = models.DateTimeField(null=True, blank=True)
+    
+    # Felder für Archivierungsschutz
+    archived = models.BooleanField(default=False)
+    protected_from_archive = models.BooleanField(default=False)
+    
+    # Zeitstempel
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+```
+
+**Schlüsselbeziehungen:**
+- `assistant_config`: Die Konfiguration des Assistenten
+- `messages` (related_name): Nachrichten in dieser Konversation
+
+**Funktionen:**
+- `mark_temporary(days)`: Markiert die Konversation als temporär mit automatischer Löschung
+- `mark_permanent()`: Markiert die Konversation als dauerhaft
+- `archive()`: Archiviert die Konversation, wenn sie nicht geschützt ist
+- `protect(protect)`: Schützt die Konversation vor Archivierung
+- `toggle_temporary()`: Wechselt zwischen temporär und dauerhaft
+- `toggle_protection()`: Wechselt zwischen geschützt und ungeschützt
+
+### 4.2 Message (apps.helper_assistant.models)
+
+```python
+class Message(models.Model):
+    ROLE_CHOICES = [("user", "Benutzer"), ("assistant", "Assistent"), ("system", "System")]
+    
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    content = models.TextField()
+    timestamp = models.DateTimeField(default=timezone.now)
+```
+
+**Schlüsselbeziehungen:**
+- `conversation`: Die Konversation, zu der diese Nachricht gehört
+
+## 5. Medienverwaltung
+
+### 5.1 StorableFile (apps.media_manager.models) - Abstract
+
+```python
+class StorableFile(models.Model):
+    file = models.FileField(upload_to=get_file_upload_path, validators=[validate_file_size])
+    filename = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    mime_type = models.CharField(max_length=100, blank=True)
+    size = models.PositiveIntegerField(default=0)
+    
+    # GenericForeignKey
+    content_type = models.ForeignKey('contenttypes.ContentType', on_delete=models.CASCADE, 
+                                    null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    
+    # Zeitstempel
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        abstract = True
+```
+
+**Funktionen:**
+- `file_url`: Property, gibt die URL zur Datei zurück
+- `file_extension`: Property, gibt die Dateierweiterung zurück
+
+### 5.2 ImageFile (apps.media_manager.models)
+
+```python
+class ImageFile(StorableFile):
+    width = models.PositiveIntegerField(null=True, blank=True)
+    height = models.PositiveIntegerField(null=True, blank=True)
+    
+    CATEGORY_CHOICES = [('logo', 'Logo'), ('avatar', 'Avatar'), ('assistant', 'Assistent-Bild'),
+                        ('background', 'Hintergrundbild'), ('icon', 'Icon'), ('other', 'Sonstiges')]
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
+    
+    ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp', 'image/bmp']
+```
+
+### 5.3 DocumentFile (apps.media_manager.models)
+
+```python
+class DocumentFile(StorableFile):
+    DOC_TYPE_CHOICES = [('pdf', 'PDF Dokument'), ('text', 'Textdokument'), 
+                         ('spreadsheet', 'Tabellendokument'), ('presentation', 'Präsentation'),
+                         ('archive', 'Archiv'), ('other', 'Sonstiges')]
+    doc_type = models.CharField(max_length=20, choices=DOC_TYPE_CHOICES, default='other')
+    
+    ALLOWED_DOCUMENT_TYPES = [
+        'application/pdf', 'text/plain', 'application/rtf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  # DOCX
+        'application/msword',  # DOC
+        'application/vnd.oasis.opendocument.text',  # ODT
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',  # XLSX
+        'application/vnd.ms-excel',  # XLS
+        'application/vnd.oasis.opendocument.spreadsheet',  # ODS
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',  # PPTX
+        'application/vnd.ms-powerpoint',  # PPT
+        'application/vnd.oasis.opendocument.presentation',  # ODP
+        'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'
+    ]
+```
+
+## 6. Beziehungen und Abhängigkeiten
+
+### 6.1 Organisations-Hierarchie
+
+- Organization ←1:n→ Team ←m:n→ User (über TeamMembership)
+- Jede Organization hat mehrere Teams
+- Jeder User gehört zu genau einer Organization
+- Jeder User kann Mitglied in mehreren Teams sein (über TeamMembership)
+- UserBillingLimits verbindet User, Team und Organization für Abrechnungszwecke
+
+### 6.2 Assistenten und Sichtbarkeit
+
+Assistant hat drei Sichtbarkeitsebenen:
+- User-Ebene: visible_to_users (m:n)
+- Team-Ebene: visible_to_teams (m:n)
+- Org-Ebene: visible_to_orgs (m:n)
+- Jeder Assistant gehört zu einem User über created_by_user
+- AssistantUsageStats verbindet Assistant und User für Nutzungsstatistiken
+
+### 6.3 Parallele Assistenten-Frameworks
+
+- Hauptframework: Assistant (Hauptmodell für komplexe Assistenten)
+- Helper-Framework: AssistantConfig → Conversation → Message
+
+### 6.4 Medienverwaltung
+
+- ImageFile und DocumentFile können über GenericForeignKey mit jedem Modell verknüpft werden
+- Insbesondere: Organization.images für Organisationslogos
+
+## 7. Besondere Einschränkungen und Regeln
+
+### 7.1 Organisations-Isolation
+
+- Benutzer können nur auf Inhalte ihrer eigenen Organisation zugreifen
+- Team-Mitglieder müssen zur selben Organisation gehören wie das Team
+- TeamMembership.clean() und UserBillingLimits.clean() erzwingen diese Einschränkungen
+
+### 7.2 Quota-Management
+
+- Organisationen haben Quota-Limits und Nutzungszähler
+- Teams können optionale eigene Quota-Limits haben
+- Benutzer haben keine direkte Quota, können aber über UserBillingLimits eingeschränkt werden
+
+### 7.3 Assistenten-Zugriff
+
+- Assistenten sind nur für Benutzer, Teams oder Organisationen sichtbar, mit denen sie explizit geteilt wurden
+- Die Sichtbarkeitsebene (visibility_level) bestimmt, wie Assistenten geteilt werden können
+- Assistant.is_accessible_by_user(user) prüft Zugriffsrechte
+
+### 7.4 Konversationsverwaltung
+
+- Konversationen können temporär oder dauerhaft sein
+- Temporäre Konversationen haben ein automatisches Löschdatum
+- Konversationen können archiviert werden, sofern sie nicht geschützt sind
+
+## 8. Wichtige Implementation-Details
+
+### 8.1 Django Settings
+
+- AUTH_USER_MODEL = 'organization.User': Verwendet das benutzerdefinierte Benutzermodell
+- Medienupload-Pfade werden dynamisch generiert (get_file_upload_path)
+- Dateigrößenbeschränkungen über MAX_FILE_UPLOAD_SIZE in den Einstellungen
+
+### 8.2 Dateivalidierung
+
+- Dateitypen werden mit python-magic validiert
+- Bildgrößen werden automatisch extrahiert (für ImageFile)
+- Dateipfade werden mit UUID generiert, um Kollisionen zu vermeiden
+
+### 8.3 Abrechnungssystem
+
+- Hierarchisches Abrechnungssystem: Org → Team → User
+- Teams und Benutzer können optional eigene Abrechnungen haben (has_separate_billing)
+- Kosten werden bei jeder Assistenten-Nutzung protokolliert
+
+## 9. Migrationshinweise
+
+Beim Ändern oder Erweitern der Datenbankmodelle:
+- Organisationsbeziehungen wahren: Alle neuen Modelle sollten die Organisationsisolation berücksichtigen
+- GenericForeignKey für Mediendateien: Für neue Medientypen StorableFile erweitern
+- Kompatibilität der Assistenten-Frameworks: Änderungen müssen beide Frameworks berücksichtigen
+- Quota-Management: Für neue ressourcenintensive Features Quota-Management einbauen
+- NULLable-Felder für Migrationen: Wie bei Conversation.uuid NULLable-Felder erlauben, wenn nötig
+
+## 10. Wichtige Abfragen und Hinweise
+
+### 10.1 Benutzer und Teams einer Organisation abrufen
+
+```python
+organization = Organization.objects.get(id=org_id)
+users = organization.users.all()
+teams = organization.teams.all()
+```
+
+### 10.2 Für einen Benutzer zugängliche Assistenten abrufen
+
+```python
+# Option 1: Direkt über den Benutzer
+accessible_assistants = user.accessible_assistants.all()
+
+# Option 2: Komplexere Abfrage unter Berücksichtigung aller Sichtbarkeitsebenen
+from django.db.models import Q
+user_assistants = Assistant.objects.filter(
+    Q(visible_to_users=user) | 
+    Q(visible_to_teams__in=user.teams.all()) | 
+    Q(visible_to_orgs=user.organization)
+).distinct()
+```
+
+### 10.3 Organisationsübergreifende Abfragen vermeiden
+
+Sicherheitsrelevant: Bei allen Abfragen sollte immer ein Organisationsfilter verwendet werden:
+
+```python
+# RICHTIG: Mit Organisationsfilter
+teams = Team.objects.filter(organization=user.organization)
+
+# FALSCH: Ohne Organisationsfilter
+teams = Team.objects.all()  # Gibt Teams aller Organisationen zurück!
+```
+
+### 10.4 Medienanhänge abfragen
+
+```python
+# Organisationslogo abrufen
+organization = Organization.objects.get(id=org_id)
+logo = organization.logo  # Verwendet die @property-Methode
+
+# Alle Bilder einer Organisation über GenericRelation
+images = organization.images.all()
+```
+
+### 10.5 Konversationen und Nachrichten
+
+```python
+# Alle Konversationen eines Benutzers abrufen
+conversations = Conversation.objects.filter(user_id=user.id)
+
+# Nachrichten einer Konversation abrufen
+messages = conversation.messages.all().order_by('timestamp')
+```
+
+## 11. Zusammenfassung
+
+Die VoxData-Datenbank ist eine komplexe, mehrschichtige Struktur, die eine Multi-Tenant-Umgebung für KI-Assistenten unterstützt. Sie umfasst mehrere miteinander verknüpfte Systeme:
+
+- Organisationsverwaltung: Hierarchie von Organisationen, Teams und Benutzern
+- Assistentenverwaltung: Flexible Konfiguration und Sichtbarkeit von Assistenten
+- Kommunikation: Konversationen und Nachrichten zwischen Benutzern und Assistenten
+- Medienverwaltung: Generische Speicherung von Bildern und Dokumenten
+- Abrechnung und Nutzungsverfolgung: Mehrschichtiges Abrechnungssystem
+
+Bei der Arbeit mit diesem System ist besonders auf die Organisationsisolation zu achten, um sicherzustellen, dass Benutzer nur auf ihre eigenen Daten zugreifen können

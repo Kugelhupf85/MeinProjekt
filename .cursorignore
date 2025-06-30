@@ -1,0 +1,41 @@
+# Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
+
+# Environment-Dateien NICHT ignorieren (explizit einschließen)
+!.env
+!.env.local
+!.env.development.local
+!.env.test.local
+!.env.production.local
+!.env.development
+!.env.test
+
+# Frontend Dependencies (nur im frontend/ Ordner)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Backend Dependencies
+engine/__pycache__/
+engine/**/__pycache__
+engine/**/*.pyc
+venv/
+
+# Build Outputs
+*.log
+logs/
+dump/
+backup_data/
+
+# Editor & OS
+.DS_Store
+.vscode/
+*.swp
+*.swo
+
+# Sicherstellen dass keine Frontend-Dateien im Hauptverzeichnis ignoriert werden
+# (Falls jemand versehentlich welche erstellt)
+/package.json
+/package-lock.json
+/node_modules/
+/tsconfig.json
+/vite.config.*

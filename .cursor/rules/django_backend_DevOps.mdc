@@ -1,0 +1,235 @@
+---
+description: whenever knowlege about backend architecture is usefull. describes the software architecture.
+globs: 
+alwaysApply: false
+---
+# Infrastructure & DevOps Rules - Arcanovi Project
+
+## Docker-First Architecture
+
+**Container Strategy**: All components run in optimized Docker containers with proper networking and volume management.
+
+**Service Orchestration**: Docker Compose for development, container orchestration for production.
+
+**Environment Consistency**: Identical container behavior across development, staging, and production.
+
+## Container Configuration
+
+### Django Backend Container
+- Multi-stage builds for optimized production images
+- Non-root user execution for security
+- Health check endpoints for container monitoring
+- Gunicorn with async workers for SSE support (optional)
+- Environment-based configuration management
+- Proper signal handling for graceful shutdowns
+
+### React Frontend Container
+- Nginx-based serving for static assets
+- Build-time environment variable injection
+- Gzip compression and caching headers
+- Security headers (CSP, HSTS, X-Frame-Options)
+- SSL/TLS termination configuration
+- Progressive Web App service worker setup
+
+### Database Configuration
+- PostgreSQL with proper initialization scripts
+- Volume mounting for data persistence
+- Backup and restore automation
+- Connection pooling optimization
+- Read replica setup for scaling
+- Database health monitoring
+
+### Session Management Configuration
+- Database-based session storage (no Redis dependency)
+- Django's built-in session framework
+- Session cleanup management commands
+- Memory optimization for session data
+- Connection pooling for Django
+- Session security and expiration policies
+
+## Nginx Reverse Proxy
+
+### SSE-Optimized Configuration (Optional)
+```nginx
+location /api/stream_ai_response {
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 3600s;
+    proxy_pass http://django-backend:8000;
+}
+```
+
+### Performance Optimization
+- HTTP/2 support with proper multiplexing
+- Gzip compression for text-based responses
+- Static asset caching with appropriate headers
+- Rate limiting for API endpoints
+- SSL/TLS optimization with modern cipher suites
+- Keep-alive connection management
+
+### Security Configuration
+- CORS header management for cross-origin requests
+- Request size limits to prevent DoS attacks
+- IP whitelisting for administrative endpoints
+- Security headers injection
+- DDoS protection and rate limiting
+- Log analysis for security monitoring
+
+## Network Architecture
+
+### Service Communication
+- Internal Docker network for secure service communication
+- Service discovery through Docker DNS
+- Load balancing for multiple backend instances
+- Health check integration for service reliability
+- Circuit breaker patterns for external dependencies
+- API gateway patterns for request routing
+
+### External Connectivity
+- Reverse proxy configuration for external access
+- SSL certificate management and renewal
+- CDN integration for static asset delivery
+- External API integration with proper error handling
+- Database connection security and encryption
+- Monitoring and logging aggregation
+
+## Environment Management
+
+### Development Environment
+- Docker Compose with hot reloading
+- Volume mounting for live code updates
+- Debug mode configuration
+- Database seeding and test data
+- Local SSL certificates for HTTPS testing
+- Performance profiling tools integration
+
+### Staging Environment
+- Production-like container configuration
+- Automated deployment from version control
+- Database migration testing
+- Performance benchmarking
+- Security vulnerability scanning
+- Load testing capabilities
+
+### Production Environment
+- Container orchestration (Kubernetes/Docker Swarm)
+- Rolling deployment strategies
+- Blue-green deployment support
+- Automated backup and disaster recovery
+- Monitoring and alerting integration
+- Log aggregation and analysis
+
+## Monitoring & Observability
+
+### Application Monitoring
+- Health check endpoints for all services
+- Performance metrics collection (response times, throughput)
+- Error rate tracking and alerting
+- Resource usage monitoring (CPU, memory, disk)
+- Database query performance analysis
+- Cache hit rate optimization (database cache)
+
+### Infrastructure Monitoring
+- Container resource usage and limits
+- Network latency and throughput monitoring
+- Storage usage and I/O performance
+- Service dependency mapping
+- Automated scaling based on metrics
+- Capacity planning and forecasting
+
+### Logging Strategy
+- Centralized log aggregation (ELK stack or similar)
+- Structured logging with correlation IDs
+- Log retention policies and rotation
+- Error tracking and notification
+- Audit logging for security compliance
+- Performance log analysis
+
+## Security Implementation
+
+### Container Security
+- Regular base image updates and vulnerability scanning
+- Non-root user execution in all containers
+- Resource limits to prevent resource exhaustion
+- Network segmentation between services
+- Secret management through environment variables or vault
+- Container image signing and verification
+
+### Data Protection
+- Encryption at rest for database and cache
+- Encryption in transit for all service communication
+- Proper secret rotation and management
+- Backup encryption and secure storage
+- GDPR compliance for user data handling
+- Data retention and deletion policies
+
+### Access Control
+- Role-based access to infrastructure components
+- VPN or bastion host for secure administrative access
+- Audit logging for all administrative actions
+- Multi-factor authentication for critical systems
+- Regular security assessments and penetration testing
+- Incident response procedures and automation
+
+## Deployment Automation
+
+### CI/CD Pipeline
+- Automated testing at multiple stages
+- Container image building and scanning
+- Database migration validation
+- Performance regression testing
+- Security vulnerability assessment
+- Automated rollback on failure detection
+
+### Configuration Management
+- Infrastructure as Code (Terraform/CloudFormation)
+- Configuration drift detection and correction
+- Environment-specific parameter management
+- Automated certificate renewal and rotation
+- Service mesh configuration for microservices
+- Disaster recovery automation and testing
+
+### Quality Gates
+- Code coverage thresholds enforcement
+- Performance benchmark validation
+- Security scan gate requirements
+- Database migration safety checks
+- Container image vulnerability thresholds
+- Documentation completeness verification
+
+## Caching Strategy
+
+### Database-Based Caching
+- Django's cache framework with database backend
+- Cache invalidation strategies for data consistency
+- Query optimization and result caching
+- Session storage in database tables
+- Cache key management and naming conventions
+- Performance monitoring for cache effectiveness
+
+### Static Asset Caching
+- Nginx-based static file caching
+- Browser cache headers optimization
+- CDN integration for global content delivery
+- Cache busting strategies for deployments
+- Compression and minification pipelines
+- Asset versioning and management
+
+## Background Task Processing
+
+### Django-Based Solutions
+- Django management commands for scheduled tasks
+- Database-based task queuing systems
+- Integration with lightweight task queues like `django-q`
+- Cron job configuration for periodic tasks
+- Error handling and retry mechanisms
+- Task monitoring and logging
+
+### Alternative Solutions
+- Consider `django-background-tasks` for simple async operations
+- Use `APScheduler` for complex scheduling requirements
+- Database-backed job queues for reliability
+- Proper task isolation and resource management
+- Monitoring and alerting for failed tasks
