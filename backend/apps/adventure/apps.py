@@ -10,4 +10,4 @@ class AdventureConfig(AppConfig):
         """
         Import signal handlers when the app is ready.
         """
-        import apps.adventure.listeners 
+        from . import listeners 

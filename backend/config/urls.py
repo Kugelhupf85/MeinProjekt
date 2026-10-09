@@ -8,7 +8,13 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Core User Management
+    path('api/auth/', include('apps.core_user.urls')),
+    # Temporarily commented out for migration
+    # path('api/dungeon-master/', include('apps.dungeon_master.urls')),
     path('api/world/', include('apps.world.urls')),
+    # Character Management
+    path('api/', include('apps.characters.urls')),
 ]
 
 # Serve media files in development

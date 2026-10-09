@@ -4,10 +4,8 @@ from django.apps import AppConfig
 class WorldConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.world'
-    verbose_name = 'World'
+    verbose_name = 'World Management'
     
     def ready(self):
-        """
-        Import signal handlers when the app is ready.
-        """
-        import apps.world.listeners 
+        """Import signals when the app is ready."""
+        import apps.world.signals 

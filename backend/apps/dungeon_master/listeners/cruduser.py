@@ -41,24 +41,29 @@ def validate_dungeon_master_data(sender, instance, **kwargs):
     Validate DungeonMaster data before saving.
     """
     # Ensure JSON fields are properly formatted
-    if not isinstance(instance.game_system_setting, dict):
-        instance.game_system_setting = {}
+    if not isinstance(instance.green_flags, list):
+        instance.green_flags = []
     
-    if not isinstance(instance.ui_settings, dict):
-        instance.ui_settings = {}
+    if not isinstance(instance.red_flags, list):
+        instance.red_flags = []
     
-    if not isinstance(instance.ai_settings, dict):
-        instance.ai_settings = {}
+    if not isinstance(instance.themes_preferences, list):
+        instance.themes_preferences = []
+    
+    # Validate strictness level
+    if instance.strictness_level < 1:
+        instance.strictness_level = 1
+    elif instance.strictness_level > 10:
+        instance.strictness_level = 10
 
 
 @receiver(post_save, sender=User)
 def create_dungeon_master_profile(sender, instance, created, **kwargs):
     """
-    Automatically create DungeonMaster profile when a User is created.
-    This is optional - can be removed if profiles should be created manually.
+    Automatically create DungeonMaster profile for new users (optional).
+    This is disabled by default - users must explicitly create DM profiles.
     """
-    # Uncomment the following lines if you want automatic profile creation
+    # Uncomment the following lines if you want automatic DM profile creation
     # if created:
     #     DungeonMaster.objects.create(user=instance)
-    #     logger.info(f"Auto-created DungeonMaster profile for user {instance.username}")
     pass 

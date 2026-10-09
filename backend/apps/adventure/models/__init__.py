@@ -1,6 +1,6 @@
 """
 Adventure models package.
 """
-from .modeladventure import Adventure
+# Adventure model has been removed during legacy cleanup
  
-__all__ = ['Adventure'] 
+__all__ = [] 

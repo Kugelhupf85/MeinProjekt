@@ -1,0 +1,332 @@
+[
+    {
+        "model": "characters.ruleset",
+        "pk": "550e8400-e29b-41d4-a716-446655440001",
+        "fields": {
+            "name": "dsa_4_1",
+            "display_name": "DSA 4.1",
+            "version": "4.1",
+            "attribute_schema": {
+                "required": ["MU", "KL", "IN", "CH", "FF", "GE", "KO", "KK"],
+                "properties": {
+                    "MU": {"type": "integer", "minimum": 8, "maximum": 20},
+                    "KL": {"type": "integer", "minimum": 8, "maximum": 20},
+                    "IN": {"type": "integer", "minimum": 8, "maximum": 20},
+                    "CH": {"type": "integer", "minimum": 8, "maximum": 20},
+                    "FF": {"type": "integer", "minimum": 8, "maximum": 20},
+                    "GE": {"type": "integer", "minimum": 8, "maximum": 20},
+                    "KO": {"type": "integer", "minimum": 8, "maximum": 20},
+                    "KK": {"type": "integer", "minimum": 8, "maximum": 20}
+                }
+            },
+            "default_values": {
+                "generation_points_max": 110,
+                "generation_points_attributes_max": 100,
+                "attribute_maximum": 14,
+                "base_attribute_points": 64
+            },
+            "is_active": true,
+            "created_at": "2025-01-27T16:45:00Z",
+            "updated_at": "2025-01-27T16:45:00Z"
+        }
+    },
+    {
+        "model": "characters.dsarace",
+        "pk": "550e8400-e29b-41d4-a716-446655440002",
+        "fields": {
+            "name": "Mensch",
+            "attribute_modifiers": {
+                "MU": 0, "KL": 0, "IN": 0, "CH": 0, "FF": 0, "GE": 0, "KO": 0, "KK": 0
+            },
+            "granted_special_abilities": [],
+            "starting_modifications": {
+                "life_points": 0,
+                "social_status": {"min": 1, "max": 21}
+            },
+            "generation_point_cost": 0,
+            "restrictions": {},
+            "description": "Die Menschen sind die häufigste Rasse in Aventurien. Sie sind vielseitig und anpassungsfähig.",
+            "is_active": true,
+            "created_at": "2025-01-27T16:45:00Z",
+            "updated_at": "2025-01-27T16:45:00Z"
+        }
+    },
+    {
+        "model": "characters.dsarace",
+        "pk": "550e8400-e29b-41d4-a716-446655440003",
+        "fields": {
+            "name": "Elf",
+            "attribute_modifiers": {
+                "MU": 0, "KL": 1, "IN": 0, "CH": 0, "FF": 1, "GE": 0, "KO": -1, "KK": 0
+            },
+            "granted_special_abilities": ["Infrarotsicht"],
+            "starting_modifications": {
+                "life_points": -5,
+                "astral_energy": 5,
+                "social_status": {"min": 1, "max": 4}
+            },
+            "generation_point_cost": 0,
+            "restrictions": {
+                "forbidden_professions": ["Geweihter"]
+            },
+            "description": "Die Elfen sind eine alte, magiebegabte Rasse mit langer Lebensdauer.",
+            "is_active": true,
+            "created_at": "2025-01-27T16:45:00Z",
+            "updated_at": "2025-01-27T16:45:00Z"
+        }
+    },
+    {
+        "model": "characters.dsarace",
+        "pk": "550e8400-e29b-41d4-a716-446655440004",
+        "fields": {
+            "name": "Zwerg",
+            "attribute_modifiers": {
+                "MU": 0, "KL": 0, "IN": 0, "CH": 0, "FF": 0, "GE": -1, "KO": 1, "KK": 1
+            },
+            "granted_special_abilities": ["Zäher Hund"],
+            "starting_modifications": {
+                "life_points": 5,
+                "social_status": {"min": 1, "max": 5}
+            },
+            "generation_point_cost": 0,
+            "restrictions": {},
+            "description": "Die Zwerge sind eine robuste Rasse mit großer Handwerkskunst.",
+            "is_active": true,
+            "created_at": "2025-01-27T16:45:00Z",
+            "updated_at": "2025-01-27T16:45:00Z"
+        }
+    },
+    {
+        "model": "characters.dsaculture",
+        "pk": "550e8400-e29b-41d4-a716-446655440005",
+        "fields": {
+            "name": "Mittelreich",
+            "language_bonuses": {
+                "Garethi": 10,
+                "Bosparano": 7,
+                "Alaani": 4
+            },
+            "script_bonuses": {
+                "Kusliker Zeichen": 8,
+                "Imperiale Zeichen": 5
+            },
+            "talent_modifications": {
+                "Reiten": 2,
+                "Schwimmen": -2,
+                "Singen": 1
+            },
+            "typical_professions": ["Krieger", "Handwerker", "Gelehrter", "Streuner"],
+            "social_status_min": 1,
+            "social_status_max": 6,
+            "restrictions": {},
+            "starting_equipment_modifications": {},
+            "description": "Das Mittelreich ist das Herz Aventuriens und die Heimat der meisten Menschen.",
+            "is_active": true,
+            "created_at": "2025-01-27T16:45:00Z",
+            "updated_at": "2025-01-27T16:45:00Z"
+        }
+    },
+    {
+        "model": "characters.dsaculture",
+        "pk": "550e8400-e29b-41d4-a716-446655440006",
+        "fields": {
+            "name": "Horasreich",
+            "language_bonuses": {
+                "Garethi": 8,
+                "Bosparano": 10,
+                "Alaani": 6
+            },
+            "script_bonuses": {
+                "Kusliker Zeichen": 10,
+                "Imperiale Zeichen": 8
+            },
+            "talent_modifications": {
+                "Reiten": 3,
+                "Tanzen": 2,
+                "Singen": 2
+            },
+            "typical_professions": ["Krieger", "Händler", "Gelehrter", "Streuner"],
+            "social_status_min": 1,
+            "social_status_max": 7,
+            "restrictions": {},
+            "starting_equipment_modifications": {
+                "additional_money": 50
+            },
+            "description": "Das Horasreich ist bekannt für seine Kultur und seinen Reichtum.",
+            "is_active": true,
+            "created_at": "2025-01-27T16:45:00Z",
+            "updated_at": "2025-01-27T16:45:00Z"
+        }
+    },
+    {
+        "model": "characters.dsaprofession",
+        "pk": "550e8400-e29b-41d4-a716-446655440007",
+        "fields": {
+            "name": "Krieger",
+            "category": "combat",
+            "attribute_requirements": {
+                "GE": 12,
+                "KK": 12
+            },
+            "talent_bonuses": {
+                "Schwerter": 5,
+                "Raufen": 3,
+                "Körperbeherrschung": 4,
+                "Reiten": 2
+            },
+            "granted_special_abilities": ["Kampfreflexe"],
+            "starting_equipment": {
+                "weapons": ["Schwert", "Schild"],
+                "armor": ["Lederrüstung"],
+                "money": 150
+            },
+            "generation_point_cost": 0,
+            "restrictions": {},
+            "starting_values": {
+                "social_status": 2
+            },
+            "advancement_options": {
+                "special_abilities": ["Kampfreflexe", "Wuchtschlag", "Berittener Kampf"],
+                "talents": ["Schwerter", "Raufen", "Körperbeherrschung"]
+            },
+            "description": "Der Krieger ist ein erfahrener Kämpfer, der sich auf Nahkampf spezialisiert hat.",
+            "is_active": true,
+            "created_at": "2025-01-27T16:45:00Z",
+            "updated_at": "2025-01-27T16:45:00Z"
+        }
+    },
+    {
+        "model": "characters.dsaprofession",
+        "pk": "550e8400-e29b-41d4-a716-446655440008",
+        "fields": {
+            "name": "Magier",
+            "category": "magic",
+            "attribute_requirements": {
+                "MU": 13,
+                "KL": 11,
+                "IN": 12
+            },
+            "talent_bonuses": {
+                "Magiekunde": 5,
+                "Alchimie": 3,
+                "Geographie": 2,
+                "Geschichtswissen": 2
+            },
+            "granted_special_abilities": ["Magiedilettant"],
+            "starting_equipment": {
+                "weapons": ["Dolch"],
+                "armor": [],
+                "money": 100,
+                "magical_items": ["Zauberstab"]
+            },
+            "generation_point_cost": 0,
+            "restrictions": {
+                "forbidden_advantages": ["Magiedilettant"]
+            },
+            "starting_values": {
+                "astral_energy": 20,
+                "social_status": 3
+            },
+            "advancement_options": {
+                "special_abilities": ["Magiedilettant", "Merkmalskenntnis", "Objektritual"],
+                "talents": ["Magiekunde", "Alchimie", "Geographie"]
+            },
+            "description": "Der Magier ist ein Zauberer, der die Kräfte der Magie beherrscht.",
+            "is_active": true,
+            "created_at": "2025-01-27T16:45:00Z",
+            "updated_at": "2025-01-27T16:45:00Z"
+        }
+    },
+    {
+        "model": "characters.dsaadvantage",
+        "pk": "550e8400-e29b-41d4-a716-446655440009",
+        "fields": {
+            "name": "Glück",
+            "gp_cost_base": 10,
+            "gp_cost_per_level": 5,
+            "max_levels": 3,
+            "requirements": {},
+            "effects": {
+                "schips_per_session": 2
+            },
+            "incompatible_with": ["Pech"],
+            "category": "general",
+            "restrictions": {},
+            "scaling_effects": {
+                "schips_per_session_per_level": 1
+            },
+            "description": "Der Charakter hat mehr Glück als andere und erhält zusätzliche Schicksalspunkte.",
+            "is_active": true,
+            "created_at": "2025-01-27T16:45:00Z",
+            "updated_at": "2025-01-27T16:45:00Z"
+        }
+    },
+    {
+        "model": "characters.dsaadvantage",
+        "pk": "550e8400-e29b-41d4-a716-446655440010",
+        "fields": {
+            "name": "Hohe Lebenskraft",
+            "gp_cost_base": 15,
+            "gp_cost_per_level": 0,
+            "max_levels": 1,
+            "requirements": {},
+            "effects": {
+                "life_points_bonus": 7
+            },
+            "incompatible_with": ["Niedrige Lebenskraft"],
+            "category": "physical",
+            "restrictions": {},
+            "scaling_effects": {},
+            "description": "Der Charakter hat eine besonders hohe Lebensenergie.",
+            "is_active": true,
+            "created_at": "2025-01-27T16:45:00Z",
+            "updated_at": "2025-01-27T16:45:00Z"
+        }
+    },
+    {
+        "model": "characters.dsadisadvantage",
+        "pk": "550e8400-e29b-41d4-a716-446655440011",
+        "fields": {
+            "name": "Pech",
+            "gp_gain_base": 10,
+            "gp_gain_per_level": 5,
+            "max_levels": 3,
+            "requirements": {},
+            "effects": {
+                "schips_per_session": -2
+            },
+            "incompatible_with": ["Glück"],
+            "category": "general",
+            "restrictions": {},
+            "scaling_effects": {
+                "schips_per_session_per_level": -1
+            },
+            "description": "Der Charakter hat weniger Glück als andere und erhält weniger Schicksalspunkte.",
+            "is_active": true,
+            "created_at": "2025-01-27T16:45:00Z",
+            "updated_at": "2025-01-27T16:45:00Z"
+        }
+    },
+    {
+        "model": "characters.dsadisadvantage",
+        "pk": "550e8400-e29b-41d4-a716-446655440012",
+        "fields": {
+            "name": "Niedrige Lebenskraft",
+            "gp_gain_base": 15,
+            "gp_gain_per_level": 0,
+            "max_levels": 1,
+            "requirements": {},
+            "effects": {
+                "life_points_penalty": -7
+            },
+            "incompatible_with": ["Hohe Lebenskraft"],
+            "category": "physical",
+            "restrictions": {},
+            "scaling_effects": {},
+            "description": "Der Charakter hat eine besonders niedrige Lebensenergie.",
+            "is_active": true,
+            "created_at": "2025-01-27T16:45:00Z",
+            "updated_at": "2025-01-27T16:45:00Z"
+        }
+    }
+] 

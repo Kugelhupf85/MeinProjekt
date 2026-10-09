@@ -1,279 +1,225 @@
-# 🎮 Arcanovi - Fantasy Fullstack Application
+# Arcanovi - Fantasy Tabletop RPG Management Platform
 
-Ein modernes Fullstack-Projekt mit Django Backend, React Frontend, PostgreSQL Datenbank und Nginx Reverse Proxy.
+Eine umfassende Plattform für die Verwaltung von Fantasy-Tabletop-Rollenspielen mit Django Backend, React Frontend und Docker-Infrastruktur.
+
+## 🎯 Projektübersicht
+
+Arcanovi ist eine Feature-driven Anwendung für Dungeon Master und Spieler, die es ermöglicht:
+- Kampagnen und Charaktere zu verwalten
+- Welten und Regionen zu erstellen
+- Benutzer-Profile und Parties zu organisieren
+- Flexible Rollen zwischen Spieler und Dungeon Master
 
 ## 🏗️ Architektur
 
-```
-Arcanovi/
-├── 🐍 backend/          # Django REST API
-├── ⚛️  frontend/         # React + Vite Frontend  
-├── 🌐 nginx/            # Reverse Proxy
-├── 🐳 docker-compose.yml # Container Orchestration
-└── ⚙️  .env             # Zentrale Konfiguration
-```
+### Feature-Driven Design (FDD)
+- **Backend**: Django Apps in `backend/apps/` mit aspect-basierter Struktur
+- **Frontend**: React Features in `frontend/src/features/` mit Atomic Design
+- **Infrastruktur**: Docker + Nginx + PostgreSQL
 
-## 🚀 Quick Start
+### Technologie-Stack
+- **Backend**: Django 4.2 + Django REST Framework + PostgreSQL
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
+- **Infrastruktur**: Docker + Nginx + Docker Compose
+
+## 🚀 Schnellstart
 
 ### 1. Repository klonen
 ```bash
 git clone <repository-url>
-cd Arcanovi
+cd arcanovi
 ```
 
-### 2. Umgebungsvariablen konfigurieren
+### 2. Umgebungsvariablen einrichten
 ```bash
-# .env Datei ist bereits vorkonfiguriert mit konfliktfreien Ports:
-# - Frontend: http://localhost:5001
-# - Backend:  http://localhost:7001  
-# - Database: localhost:5445
-# - Nginx:    http://localhost:8080
+cp .env.example .env
+# Bearbeite .env mit deinen Einstellungen
 ```
 
-### 3. Anwendung starten
+### 3. Services starten
 ```bash
-# Alle Services mit einem Befehl starten
-docker-compose up --build
-
-# Oder im Hintergrund
-docker-compose up -d --build
+docker-compose up -d
 ```
 
-### 4. Zugriff auf die Anwendung
-- **Frontend**: http://localhost:5001
-- **Backend API**: http://localhost:7001/api
-- **Django Admin**: http://localhost:7001/admin
-- **Nginx (Production-like)**: http://localhost:8080
-
-## 🔧 Konfiguration
-
-### Zentrale .env Datei
-Alle Konfigurationswerte werden aus der `.env` Datei geladen. **Keine hardcoded Werte!**
-
+### 4. Datenbank migrieren
 ```bash
-# Wichtige Einstellungen
-FRONTEND_PORT=5001          # React Frontend Port
-BACKEND_PORT=7001           # Django Backend Port  
-DATABASE_PORT=5445          # PostgreSQL Port
-NGINX_PORT=8080             # Nginx Port
-
-# Datenbank
-POSTGRES_DB=arcanovi_db
-POSTGRES_USER=arcanovi_user
-POSTGRES_PASSWORD=arcanovi_secure_password_2024
-
-# Django
-SECRET_KEY=arcanovi-super-secret-key-no-fallbacks-2024-fantasy-realm
-DEBUG=true
+docker-compose exec arcanovi-backend python manage.py migrate
 ```
 
-### Port-Konflikte vermeiden
-Die Ports sind so gewählt, dass sie nicht mit anderen Projekten kollidieren:
-- **bb-voxdata**: 3000, 8001, 5432, 80
-- **bb-lookout**: 4001, 9001, 5440
-- **Arcanovi**: 5001, 7001, 5445, 8080
+### 5. ⚠️ Admin-Benutzer erstellen (WICHTIG!)
 
-## 🐳 Docker Services
+**NIEMALS `createsuperuser` verwenden!**
 
-### Backend (Django)
-- **Container**: `arcanovi-backend`
-- **Port**: 7001:8000
-- **Features**: 
-  - Automatische Migrations
-  - Static Files Collection
-  - Erweiterte Health-Checks
-  - PostgreSQL Integration
+Alle Benutzer in Arcanovi werden über das DungeonMaster-System verwaltet. Verwende ausschließlich das bereitgestellte Management-Command:
 
-### Frontend (React + Vite)
-- **Container**: `arcanovi-frontend`
-- **Port**: 5001:3000
-- **Features**:
-  - Hot Module Replacement (HMR)
-  - API Proxy zu Backend
-  - Modern Build Pipeline
-  - TypeScript Support
-
-### Database (PostgreSQL)
-- **Container**: `arcanovi-db`
-- **Port**: 5445:5432
-- **Features**:
-  - Persistent Data Storage
-  - Health-Checks
-  - Optimierte Performance
-
-### Nginx (Reverse Proxy)
-- **Container**: `arcanovi-nginx`
-- **Port**: 8080:80
-- **Features**:
-  - Template-basierte Konfiguration
-  - CORS Headers
-  - Static File Serving
-  - API Routing
-
-## 🛠️ Development
-
-### Backend Development
 ```bash
-# Backend Container betreten
-docker-compose exec arcanovi-backend bash
+# Admin-Benutzer erstellen
+docker-compose exec arcanovi-backend python manage.py create_admin_user --password dev123
 
-# Django Commands ausführen
-python manage.py makemigrations
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py collectstatic
+# Mit benutzerdefinierten Daten
+docker-compose exec arcanovi-backend python manage.py create_admin_user \
+    --username gamemaster \
+    --email gm@yourdomain.com \
+    --password "SecurePassword123!" \
+    --display-name "Game Master Supreme"
 ```
 
-### Frontend Development
-```bash
-# Frontend Container betreten
-docker-compose exec arcanovi-frontend sh
+### 6. Anwendung aufrufen
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000/api/
+- **Admin Interface**: http://localhost:8000/admin/
 
-# NPM Commands ausführen
-npm install
-npm run dev
-npm run build
-npm run lint
+## 📁 Projektstruktur
+
+```
+arcanovi/
+├── backend/                    # Django Backend
+│   ├── apps/                   # Feature-Apps
+│   │   ├── adventure/          # Kampagnen-Management
+│   │   ├── dungeon_master/     # Benutzer-System
+│   │   │   ├── management/     # Admin-Scripts
+│   │   │   │   ├── commands/   # Django Commands
+│   │   │   │   └── scripts/    # Shell-Scripts
+│   │   │   ├── models/         # User-Models
+│   │   │   └── api/           # API-Endpoints
+│   │   └── world/             # Welten-System
+│   ├── config/                # Django-Konfiguration
+│   └── manage.py
+├── frontend/                  # React Frontend
+│   ├── src/
+│   │   ├── features/         # Feature-basierte Komponenten
+│   │   └── components/       # Geteilte Komponenten
+│   └── package.json
+├── nginx/                    # Nginx-Konfiguration
+├── docker-compose.yml       # Service-Orchestrierung
+└── .env                     # Umgebungsvariablen
 ```
 
-### Logs anzeigen
-```bash
-# Alle Services
-docker-compose logs -f
+## 🔧 Entwicklung
 
-# Einzelner Service
-docker-compose logs -f arcanovi-backend
-docker-compose logs -f arcanovi-frontend
-docker-compose logs -f arcanovi-nginx
+### Backend-Entwicklung
+```bash
+# Django-Server starten
+docker-compose exec arcanovi-backend python manage.py runserver
+
+# Migrationen erstellen
+docker-compose exec arcanovi-backend python manage.py makemigrations
+
+# Migrationen anwenden
+docker-compose exec arcanovi-backend python manage.py migrate
+
+# Tests ausführen
+docker-compose exec arcanovi-backend python manage.py test
 ```
 
-## 🏥 Health Checks
-
-Alle Services haben erweiterte Health-Checks:
-
+### Frontend-Entwicklung
 ```bash
-# Service Status prüfen
+# Development-Server starten
+docker-compose exec arcanovi-frontend npm run dev
+
+# Build erstellen
+docker-compose exec arcanovi-frontend npm run build
+
+# Tests ausführen
+docker-compose exec arcanovi-frontend npm test
+```
+
+## 👥 Benutzer-Verwaltung
+
+### ⚠️ WICHTIGE REGEL: Niemals `createsuperuser` verwenden!
+
+**Alle Benutzer werden über das DungeonMaster-System verwaltet.**
+
+### Admin-Benutzer erstellen
+```bash
+# Standard-Admin
+docker-compose exec arcanovi-backend python manage.py create_admin_user --password dev123
+
+# Mit Shell-Script
+docker-compose exec arcanovi-backend bash apps/dungeon_master/management/scripts/create_admin.sh
+```
+
+### Warum nicht `createsuperuser`?
+1. **Konsistenz**: Alle Benutzer folgen dem DungeonMaster-System
+2. **Vollständigkeit**: Automatische Erstellung aller Profile und Einstellungen
+3. **Sicherheit**: Konsistente Berechtigungen und Validierung
+4. **Wartbarkeit**: Zentrale Verwaltung aller Benutzer-Logik
+
+Siehe `backend/apps/dungeon_master/management/README.md` für detaillierte Anweisungen.
+
+## 🐳 Docker-Services
+
+| Service | Port | Beschreibung |
+|---------|------|-------------|
+| `arcanovi-frontend` | 3000 | React Development Server |
+| `arcanovi-backend` | 8000 | Django API Server |
+| `arcanovi-db` | 5445 | PostgreSQL Database |
+| `arcanovi-nginx` | 80 | Nginx Reverse Proxy |
+
+### Service-Status prüfen
+```bash
 docker-compose ps
-
-# Health-Check Details
-docker inspect arcanovi-backend --format='{{.State.Health.Status}}'
-```
-
-## 📊 Monitoring
-
-### Container Resources
-```bash
-# Resource Usage anzeigen
-docker stats
-
-# Spezifische Container
-docker stats arcanovi-backend arcanovi-frontend arcanovi-db
-```
-
-### Database Zugriff
-```bash
-# PostgreSQL Shell
-docker-compose exec arcanovi-db psql -U arcanovi_user -d arcanovi_db
+docker-compose logs -f arcanovi-backend
 ```
 
 ## 🔒 Sicherheit
 
-### Development vs Production
-- **Development**: Debug=True, CORS relaxed, Console Email Backend
-- **Production**: Alle Sicherheitseinstellungen aus .env konfigurierbar
+### Produktionsumgebung
+- Starke Passwörter für Admin-Benutzer verwenden
+- Umgebungsvariablen für Secrets verwenden
+- HTTPS aktivieren
+- Regelmäßige Sicherheitsupdates
 
-### Umgebungsvariablen
+### Entwicklungsumgebung
+- Standard-Passwort nach erstem Login ändern
+- Keine Produktionsdaten in Entwicklung verwenden
+
+## 📊 Datenbank
+
+### Verbindung zur Datenbank
 ```bash
-# Sicherheitsrelevante Einstellungen
-USE_HTTPS=false                    # Development
-SECURE_SSL_REDIRECT=false          # Development  
-SESSION_COOKIE_SECURE=false        # Development
-CSRF_COOKIE_SECURE=false           # Development
+docker-compose exec arcanovi-db psql -U arcanovi_user -d arcanovi_db
 ```
 
-## 🚨 Troubleshooting
-
-### Port bereits in Verwendung
+### Backup erstellen
 ```bash
-# Ports prüfen
-netstat -tulpn | grep :5001
-netstat -tulpn | grep :7001
-
-# Services stoppen
-docker-compose down
+docker-compose exec arcanovi-db pg_dump -U arcanovi_user arcanovi_db > backup.sql
 ```
 
-### Container neu bauen
+## 🧪 Testing
+
+### Backend-Tests
 ```bash
-# Alle Container neu bauen
-docker-compose down
-docker-compose build --no-cache
-docker-compose up
+docker-compose exec arcanovi-backend python manage.py test
 ```
 
-### Volumes zurücksetzen
+### Frontend-Tests
 ```bash
-# Alle Volumes löschen (⚠️ Datenverlust!)
-docker-compose down -v
-docker volume prune
+docker-compose exec arcanovi-frontend npm test
 ```
 
-### Logs debuggen
-```bash
-# Detaillierte Logs
-docker-compose logs --details arcanovi-backend
-docker-compose logs --details arcanovi-frontend
-```
+## 📚 Dokumentation
 
-## 📚 API Dokumentation
+- **Backend-Architektur**: Siehe `backend/README.md`
+- **Frontend-Architektur**: Siehe `frontend/README.md`
+- **Benutzer-Verwaltung**: Siehe `backend/apps/dungeon_master/management/README.md`
+- **API-Dokumentation**: http://localhost:8000/api/docs/
 
-### Backend Endpoints
-- `GET /api/` - API Root
-- `GET /admin/` - Django Admin
-- `GET /static/` - Static Files
-- `GET /media/` - Media Files
-
-### Frontend Routes
-- `/` - Homepage
-- Weitere Routes werden durch React Router definiert
-
-## 🔄 Updates
-
-### Dependencies aktualisieren
-```bash
-# Backend
-cd backend
-pip list --outdated
-
-# Frontend  
-cd frontend
-npm outdated
-npm update
-```
-
-### Docker Images aktualisieren
-```bash
-docker-compose pull
-docker-compose up --build
-```
-
-## 🤝 Contributing
+## 🤝 Beitragen
 
 1. Fork das Repository
-2. Feature Branch erstellen (`git checkout -b feature/amazing-feature`)
-3. Changes committen (`git commit -m 'Add amazing feature'`)
-4. Branch pushen (`git push origin feature/amazing-feature`)
-5. Pull Request erstellen
+2. Erstelle einen Feature-Branch
+3. Implementiere deine Änderungen
+4. Teste deine Änderungen
+5. Erstelle einen Pull Request
 
-## 📄 License
+## 📄 Lizenz
 
-Dieses Projekt ist unter der MIT License lizenziert.
+Dieses Projekt ist unter der MIT-Lizenz lizenziert.
 
-## 🎯 Roadmap
+## 🆘 Support
 
-- [ ] Authentication System
-- [ ] User Management
-- [ ] API Documentation (Swagger)
-- [ ] Testing Setup
-- [ ] CI/CD Pipeline
-- [ ] Production Deployment Guide 
+Bei Fragen oder Problemen:
+1. Überprüfe die Dokumentation
+2. Suche in den Issues
+3. Erstelle ein neues Issue mit detaillierter Beschreibung 

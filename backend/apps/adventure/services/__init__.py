@@ -1,6 +1,6 @@
 """
 Services package for the adventure app.
 """
-from .crudcampaign import AdventureCRUD
+# AdventureCRUD service has been removed during legacy cleanup
  
-__all__ = ['AdventureCRUD'] 
+__all__ = [] 

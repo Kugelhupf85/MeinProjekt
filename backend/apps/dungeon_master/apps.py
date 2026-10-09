@@ -10,4 +10,4 @@ class DungeonMasterConfig(AppConfig):
         """
         Import signal handlers when the app is ready.
         """
-        import apps.dungeon_master.listeners 
+        from . import listeners 

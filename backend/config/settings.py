@@ -34,10 +34,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
-    # Feature Apps
-    'apps.dungeon_master',
-    'apps.adventure',
+    # Core Apps
+    'apps.core_user',
+    'apps.permissions',
+    'apps.characters',
+    # Feature Apps - temporarily commented out for migration
+    # 'apps.dungeon_master',
     'apps.world',
 ]
 
@@ -53,7 +57,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'arcanovi.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -71,7 +75,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'arcanovi.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 # =====================================================================================
 # 🗄️ DATABASE CONFIGURATION - AUS .env
@@ -108,6 +112,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # =====================================================================================
+# 👤 AUTHENTICATION CONFIGURATION
+# =====================================================================================
+# Custom user model for Arcanovi
+AUTH_USER_MODEL = 'core_user.User'
+
+# =====================================================================================
 # 🌍 INTERNATIONALIZATION - AUS .env
 # =====================================================================================
 LANGUAGE_CODE = os.environ.get('LANGUAGE_CODE', 'de-de')  # ⚠️ AUS .env: LANGUAGE_CODE
@@ -134,6 +144,10 @@ MEDIA_ROOT = os.environ.get('MEDIA_ROOT', '/app/media')   # ⚠️ AUS .env: MED
 # 🎛️ DJANGO REST FRAMEWORK - AUS .env
 # =====================================================================================
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
         os.environ.get('DRF_DEFAULT_PERMISSION', 'rest_framework.permissions.IsAuthenticated'),
     ],
@@ -142,6 +156,31 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': int(os.environ.get('DRF_PAGE_SIZE', '20'))  # ⚠️ AUS .env: DRF_PAGE_SIZE
+}
+
+# =====================================================================================
+# 🔐 JWT CONFIGURATION
+# =====================================================================================
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
 # =====================================================================================

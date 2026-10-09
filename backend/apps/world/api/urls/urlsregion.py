@@ -3,20 +3,15 @@ Region URL Configuration
 """
 
 from django.urls import path
-from apps.world.api.endpoints.viewregion import (
-    create_region, get_region, list_regions, update_region, 
-    delete_region, search_regions, get_region_statistics
-)
+from apps.world.api.views import viewregion
 
 urlpatterns = [
     # Region CRUD operations
-    path('', list_regions, name='list_regions'),
-    path('create/', create_region, name='create_region'),
-    path('<str:region_id>/', get_region, name='get_region'),
-    path('<str:region_id>/update/', update_region, name='update_region'),
-    path('<str:region_id>/delete/', delete_region, name='delete_region'),
+    path('worlds/<int:world_id>/regions/', viewregion.region_list, name='region_list'),
+    path('worlds/<int:world_id>/regions/create/', viewregion.region_create, name='region_create'),
+    path('worlds/<int:world_id>/regions/<int:region_id>/', viewregion.region_detail, name='region_detail'),
     
-    # Region search and statistics
-    path('search/', search_regions, name='search_regions'),
-    path('<str:region_id>/statistics/', get_region_statistics, name='get_region_statistics'),
+    # Region statistics and search
+    path('worlds/<int:world_id>/regions/<int:region_id>/statistics/', viewregion.region_statistics, name='region_statistics'),
+    path('worlds/<int:world_id>/regions/search/', viewregion.region_search, name='region_search'),
 ] 

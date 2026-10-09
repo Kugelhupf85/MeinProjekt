@@ -1,0 +1,107 @@
+[
+  {
+    "model": "core_user.role",
+    "pk": 1,
+    "fields": {
+      "name": "player",
+      "display_name": "Player",
+      "description": "Standard player role with basic access to worlds and adventures",
+      "is_active": true,
+      "created_at": "2025-01-27T00:00:00Z"
+    }
+  },
+  {
+    "model": "core_user.role",
+    "pk": 2,
+    "fields": {
+      "name": "dungeon_master",
+      "display_name": "Dungeon Master",
+      "description": "Dungeon Master role with ability to create and manage adventures",
+      "is_active": true,
+      "created_at": "2025-01-27T00:00:00Z"
+    }
+  },
+  {
+    "model": "core_user.role",
+    "pk": 3,
+    "fields": {
+      "name": "world_admin",
+      "display_name": "World Administrator",
+      "description": "World administrator with full control over world settings and users",
+      "is_active": true,
+      "created_at": "2025-01-27T00:00:00Z"
+    }
+  },
+  {
+    "model": "core_user.securityquestion",
+    "pk": 1,
+    "fields": {
+      "question_text": "Wie heißt Ihr erster Pen-and-Paper-Charakter?",
+      "is_active": true,
+      "created_at": "2025-01-27T00:00:00Z"
+    }
+  },
+  {
+    "model": "core_user.securityquestion",
+    "pk": 2,
+    "fields": {
+      "question_text": "Welches war Ihr erstes Rollenspielsystem?",
+      "is_active": true,
+      "created_at": "2025-01-27T00:00:00Z"
+    }
+  },
+  {
+    "model": "core_user.securityquestion",
+    "pk": 3,
+    "fields": {
+      "question_text": "Wie heißt Ihr Lieblings-Spielmeister/DM?",
+      "is_active": true,
+      "created_at": "2025-01-27T00:00:00Z"
+    }
+  },
+  {
+    "model": "core_user.securityquestion",
+    "pk": 4,
+    "fields": {
+      "question_text": "In welcher Fantasy-Welt spielen Sie am liebsten?",
+      "is_active": true,
+      "created_at": "2025-01-27T00:00:00Z"
+    }
+  },
+  {
+    "model": "core_user.securityquestion",
+    "pk": 5,
+    "fields": {
+      "question_text": "Welche Charakterklasse spielen Sie am häufigsten?",
+      "is_active": true,
+      "created_at": "2025-01-27T00:00:00Z"
+    }
+  },
+  {
+    "model": "core_user.securityquestion",
+    "pk": 6,
+    "fields": {
+      "question_text": "Wie heißt Ihr denkwürdigstes Rollenspiel-Abenteuer?",
+      "is_active": true,
+      "created_at": "2025-01-27T00:00:00Z"
+    }
+  },
+  {
+    "model": "core_user.securityquestion",
+    "pk": 7,
+    "fields": {
+      "question_text": "Welches Würfelset verwenden Sie am liebsten?",
+      "is_active": true,
+      "created_at": "2025-01-27T00:00:00Z"
+    }
+  },
+  {
+    "model": "core_user.securityquestion",
+    "pk": 8,
+    "fields": {
+      "question_text": "Wie heißt Ihre liebste Rollenspiel-Spielrunde?",
+      "is_active": true,
+      "created_at": "2025-01-27T00:00:00Z"
+    }
+  }
+] 

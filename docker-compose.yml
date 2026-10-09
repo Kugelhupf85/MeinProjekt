@@ -115,6 +115,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: development
     container_name: ${FRONTEND_CONTAINER_NAME}  # ⚠️ AUS .env: FRONTEND_CONTAINER_NAME
     volumes:
       - ./frontend:/app  # Development Volume Mount

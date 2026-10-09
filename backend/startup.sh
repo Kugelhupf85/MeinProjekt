@@ -3,6 +3,9 @@ set -e
 
 echo "🚀 Starting Arcanovi backend..."
 
+# Set Django settings module explicitly
+export DJANGO_SETTINGS_MODULE=config.settings
+
 # Warte auf Datenbank
 echo "⏳ Waiting for database..."
 while ! nc -z arcanovi-db 5432; do
